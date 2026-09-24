@@ -12,13 +12,23 @@ const DEFAULT_SIZE = [790, 740];
 const MIN_SIZE = [520, 470];
 
 const COLORS = {
-    yellow: "#ffd400",
-    green: "#00ef35",
-    blue: "#149ce8",
-    purple: "#ff00be",
-    grey: "#8d8d8d",
+    panelAvailable: "#000000",
+    panelSelected: "#43AE5F",
+    tabActive: "#1688B8",
+    tabInactive: "#C5A600",
+    tagAvailable: "#5A123F",
+    tagAvailableMuted: "#3F6F7A",
+    tagGenerated: "#8D8D8D",
+    tagUser: "#7D4F74",
+    quickCustom: "#9A176F",
+    buttonAccept: "#8A8A8A",
+    buttonAcceptDisabled: "#8A8A8A",
+    border: "#383838",
+    inputBg: "#1B1B1B",
+    inputBorder: "#555555",
     textDark: "#111111",
-    textLight: "#ffffff",
+    textLight: "#F1F1F1",
+    textMuted: "#B2B2B2",
 };
 
 function isOurNode(node) {
@@ -83,7 +93,8 @@ function makeUI(node) {
 
     const available = document.createElement("div");
     Object.assign(available.style, {
-        background: "#000000",
+        background: COLORS.panelAvailable,
+        border: `1px solid ${COLORS.border}`,
         borderRadius: "11px",
         padding: "14px",
         display: "flex",
@@ -98,7 +109,8 @@ function makeUI(node) {
 
     const selected = document.createElement("div");
     Object.assign(selected.style, {
-        background: COLORS.green,
+        background: COLORS.panelSelected,
+        border: `1px solid ${COLORS.border}`,
         borderRadius: "11px",
         padding: "14px",
         display: "flex",
@@ -131,13 +143,13 @@ function makeUI(node) {
         maxWidth: "62%",
         minWidth: "180px",
         height: "36px",
-        border: "1px solid #777",
+        border: `1px solid ${COLORS.inputBorder}`,
         borderRadius: "8px",
         padding: "5px 10px",
         boxSizing: "border-box",
         fontFamily: "inherit",
         fontSize: "15px",
-        background: "#202020",
+        background: COLORS.inputBg,
         color: "#ffffff",
         outline: "none",
         userSelect: "text",
@@ -148,7 +160,7 @@ function makeUI(node) {
         minWidth: "185px",
         height: "36px",
         minHeight: "36px",
-        background: COLORS.purple,
+        background: COLORS.quickCustom,
         color: COLORS.textLight,
         fontSize: "14px",
         padding: "5px 12px",
@@ -162,7 +174,7 @@ function makeUI(node) {
     const status = document.createElement("div");
     status.textContent = "Waiting for workflow...";
     Object.assign(status.style, {
-        color: "rgba(255,255,255,.62)",
+        color: COLORS.textMuted,
         fontSize: "11px",
         lineHeight: "16px",
         textAlign: "center",
@@ -181,7 +193,7 @@ function makeUI(node) {
         alignSelf: "center",
         flex: "0 0 42px",
         height: "42px",
-        background: "#9d9d9d",
+        background: COLORS.buttonAcceptDisabled,
         color: "#111",
         fontSize: "17px",
         cursor: "default",
@@ -235,15 +247,17 @@ function setEnabled(node, enabled) {
     if (!ui) return;
     ui.enabled = !!enabled;
     ui.accept.disabled = !ui.enabled || !node.__urnStyleSelectorToken;
-    ui.accept.style.opacity = ui.accept.disabled ? ".65" : "1";
+    ui.accept.style.opacity = "1";
     ui.accept.style.cursor = ui.accept.disabled ? "default" : "pointer";
+    ui.accept.style.background = COLORS.buttonAccept;
+    ui.accept.style.color = COLORS.textDark;
     ui.customInput.disabled = !ui.enabled;
     ui.quickAdd.disabled = !ui.enabled;
-    ui.customInput.style.opacity = ui.enabled ? "1" : ".55";
-    ui.quickAdd.style.opacity = ui.enabled ? "1" : ".55";
+    ui.customInput.style.opacity = "1";
+    ui.quickAdd.style.opacity = "1";
     ui.quickAdd.style.cursor = ui.enabled ? "pointer" : "default";
-    ui.available.style.filter = ui.enabled ? "none" : "saturate(.55) brightness(.80)";
-    ui.selected.style.filter = ui.enabled ? "none" : "saturate(.55) brightness(.80)";
+    ui.available.style.filter = "none";
+    ui.selected.style.filter = "none";
     renderTabs(node);
     renderAvailable(node);
     renderSelected(node);
@@ -261,10 +275,10 @@ function renderTabs(node) {
         const button = makeButton(name);
         const active = name === ui.activeTab;
         Object.assign(button.style, {
-            background: active ? COLORS.blue : COLORS.yellow,
-            color: COLORS.textDark,
+            background: active ? COLORS.tabActive : COLORS.tabInactive,
+            color: COLORS.textLight,
             minWidth: "92px",
-            opacity: ui.enabled ? "1" : ".72",
+            opacity: "1",
             cursor: ui.enabled ? "pointer" : "default",
         });
         button.addEventListener("click", (e) => {
@@ -291,12 +305,11 @@ function renderAvailable(node) {
         const button = makeButton(tag);
         const alreadySelected = selectedKeys.has(keyOf(tag));
         Object.assign(button.style, {
-            // Keep the inactive/already-selected tags visually subdued by dimming
-            // only the purple background. Do not fade the whole button, because
-            // that also turns the label text grey against the black panel.
-            background: (!ui.enabled || alreadySelected)
-                ? "rgba(255, 0, 190, 0.36)"
-                : COLORS.purple,
+            // Already-selected tags use a distinct muted teal background so the user can
+            // immediately see which available styles are already in the selection.
+            background: alreadySelected
+                ? COLORS.tagAvailableMuted
+                : COLORS.tagAvailable,
             color: COLORS.textLight,
             minWidth: "150px",
             maxWidth: "100%",
@@ -328,7 +341,7 @@ function renderSelected(node) {
         const empty = document.createElement("div");
         empty.textContent = "No styles selected";
         Object.assign(empty.style, {
-            color: "rgba(0,0,0,.55)",
+            color: COLORS.textMuted,
             fontSize: "14px",
             fontWeight: "700",
             padding: "6px 4px",
@@ -341,12 +354,12 @@ function renderSelected(node) {
         const origin = ui.origins.get(keyOf(tag)) || "user";
         const button = makeButton(tag);
         Object.assign(button.style, {
-            background: origin === "generated" ? COLORS.grey : COLORS.purple,
+            background: origin === "generated" ? COLORS.tagGenerated : COLORS.tagUser,
             color: COLORS.textLight,
             minWidth: "150px",
             maxWidth: "100%",
             flex: "0 1 auto",
-            opacity: ui.enabled ? "1" : ".72",
+            opacity: "1",
             cursor: ui.enabled ? "pointer" : "default",
         });
         button.title = ui.enabled ? `Remove ${tag}` : tag;
@@ -463,7 +476,7 @@ async function addQuickCustom(node) {
     } finally {
         ui.quickAdd.textContent = "ADD QUICK CUSTOM";
         ui.quickAdd.disabled = !ui.enabled;
-        ui.quickAdd.style.opacity = ui.enabled ? "1" : ".55";
+        ui.quickAdd.style.opacity = "1";
         ui.quickAdd.style.cursor = ui.enabled ? "pointer" : "default";
     }
 }
