@@ -6,7 +6,8 @@ Several nodes support optional transcription, stem-separation, and music-analysi
 
 ## Included Nodes
 ### URN Audio Lyrics (Automatically Retrieves lyrics online)
-<img width="493" height="612" alt="image" src="https://github.com/user-attachments/assets/2b995ffc-26e8-4d50-9b82-a8c7c19af5ea" />
+Automatically Retrieves lyrics for songs or transcribes them when online lyrics cannot be found. 
+<img width="536" height="526" alt="image" src="https://github.com/user-attachments/assets/116a07a8-d5c3-478b-b671-0cde1f64435b" />
 
 Automatically Retrieves lyrics for songs or transcribes them when online lyrics cannot be found.  
 Supports automatic title detection, interactive song selection, manual artist/title search, and Whisper as the final fallback.  
