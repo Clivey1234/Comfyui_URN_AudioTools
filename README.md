@@ -6,8 +6,9 @@ Several nodes support optional transcription, stem-separation, and music-analysi
 
 ## Included Nodes
 ### URN Audio Lyrics (gets online Lyrics for Yue2 etc)
+<img width="493" height="612" alt="image" src="https://github.com/user-attachments/assets/2b995ffc-26e8-4d50-9b82-a8c7c19af5ea" />
 
-Retrieves lyrics for songs or transcribes them when online lyrics cannot be found.  
+Automatically Retrieves lyrics for songs or transcribes them when online lyrics cannot be found.  
 Supports automatic title detection, interactive song selection, manual artist/title search, and Whisper as the final fallback.  
 It can also output duration, filtered MusicBrainz style information, BPM analysis, and the original audio.
 ### URN Audio Style Selector (gets online Genres for Yue2 etc)
