@@ -14,6 +14,7 @@ Supports automatic title detection, interactive song selection, manual artist/ti
 It can also output duration, filtered MusicBrainz style information, BPM analysis, and the original audio.
 
 
+
 ### URN Audio Style Selector (gets online Genres for Yue2 etc)
 Populates with online tags and allows you to add/remove/customise tags
 <img width="640" height="540" alt="image" src="https://github.com/user-attachments/assets/05e26896-7004-47f8-b823-946538f64173" />
@@ -21,6 +22,7 @@ Populates with online tags and allows you to add/remove/customise tags
 Visual style/tag selector designed for music-generation workflows such as YuE2.  
 Incoming generated styles can be reviewed, removed, or supplemented with user-selected tags from configurable categories.  
 Tabs and available styles are loaded from JSON, and custom user tags can be added and saved directly from the node.
+
 
 
 ### URN Audio Smart Splitter (Splits  audio into chunks while avoiding cutting through vocals or words)
@@ -31,12 +33,14 @@ Can use Whisper analysis and optional Mel-RoFormer vocal/music separation to imp
 Supports vocal/music stem export, vocal chunks, transcript sidecars, and FLAC/MP3 chunk output.
 
 
+
 ### URN Audio Mixer (Mix tracks and audio samples)
 <img width="640" height="512" alt="image" src="https://github.com/user-attachments/assets/4178afea-55d7-429e-b95b-1bdc04605cf8" />
 
 A visual multi-track audio mixer for arranging and combining multiple clips inside ComfyUI.  
 Clips can be positioned and adjusted independently with trim, fades, and track-level controls.  
 Useful for assembling generated music, vocals, effects, or other audio elements into a final mix.
+
 
 
 ### URN Audio Channel
@@ -47,6 +51,7 @@ Includes left/right level control, channel swapping, static panning, and whole-c
 Designed as a lightweight utility node for quick stereo adjustments.
 
 
+
 ### URN Audio Trim Fade
 <img width="640" height="540" alt="image" src="https://github.com/user-attachments/assets/ad56ad6b-cae4-49ac-8e7f-7f752bb5cc37" />
 
@@ -55,11 +60,14 @@ Includes an interactive waveform editor with start/end and fade controls, plus l
 Can work by output length or end position and passes the processed audio back into the workflow.
 
 
+
 ### URN Text Edit
 
 Interactive text-review node that pauses the workflow until the user accepts the current text.  
 The text can be edited directly, saved to a `.txt` file, or replaced by loading an existing `.txt` file.  
 Only **Accept Changes** resumes downstream workflow execution.
+
+
 
 ## Optional Models and Downloads
 
@@ -82,6 +90,7 @@ Each top-level JSON section automatically becomes a tab, so categories and tags 
 Contains tags that should be excluded from MusicBrainz-derived music descriptions.  
 The file can be edited directly to customise the filtering behaviour.
 
+
 ## Dependencies
 
 The package uses several non-core Python dependencies, including:
@@ -93,6 +102,7 @@ The package uses several non-core Python dependencies, including:
 - `soundfile`
 
 Use the included `install.bat` or install the versions listed in `requirements.txt` with the Python environment used by ComfyUI.
+
 
 ## Installation
 
@@ -108,6 +118,7 @@ Use the included `install.bat` or install the versions listed in `requirements.t
 5. After updating frontend files, a browser hard refresh (`Ctrl+F5`) may be required.
 
 > If you already manage dependencies manually, you can install them from `requirements.txt` using ComfyUI's Python environment.
+
 
 ### Manual installation with pip
 
