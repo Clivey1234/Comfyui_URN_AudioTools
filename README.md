@@ -14,7 +14,7 @@ Supports automatic title detection, interactive song selection, manual artist/ti
 It can also output duration, filtered MusicBrainz style information, BPM analysis, and the original audio.
 
 
-
+.
 ### URN Audio Style Selector (gets online Genres for Yue2 etc)
 Populates with online tags and allows you to add/remove/customise tags
 <img width="640" height="540" alt="image" src="https://github.com/user-attachments/assets/05e26896-7004-47f8-b823-946538f64173" />
