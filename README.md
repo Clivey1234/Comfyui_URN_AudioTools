@@ -15,7 +15,7 @@ Retrieves lyrics for songs or transcribes them when online lyrics cannot be foun
 Supports automatic title detection, interactive song selection, manual artist/title search, and Whisper as the final fallback.  
 It can also output duration, filtered MusicBrainz style information, BPM analysis, and the original audio.
 
-### URN Save Audio with Lyrics (Automatically saves metadata in audieo file with Lyrics)
+### URN Save Audio with Lyrics (Automatically saves metadata in audio file with Lyrics)
 <img width="543" height="277" alt="image" src="https://github.com/user-attachments/assets/73231ff3-2ca0-4239-87bb-38c48d7c038f" />
 
 
