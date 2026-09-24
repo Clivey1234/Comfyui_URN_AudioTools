@@ -5,7 +5,7 @@ The package is designed to keep common audio tasks inside ComfyUI while providin
 Several nodes support optional transcription, stem-separation, and music-analysis features.
 
 ## Included Nodes
-### URN Audio Lyrics (Automatically Retrieves lyrics online)
+### URN Audio Lyrics (Automatically Retrieves lyrics and music tags online)
 Automatically Retrieves lyrics for songs or transcribes them when online lyrics cannot be found. 
 <img width="536" height="526" alt="image" src="https://github.com/user-attachments/assets/116a07a8-d5c3-478b-b671-0cde1f64435b" />
 
@@ -13,6 +13,8 @@ Automatically Retrieves lyrics for songs or transcribes them when online lyrics 
 Supports automatic title detection, interactive song selection, manual artist/title search, and Whisper as the final fallback.  
 It can also output duration, filtered MusicBrainz style information, BPM analysis, and the original audio.
 ### URN Audio Style Selector (gets online Genres for Yue2 etc)
+Populates with online tags and allows you to add/remove/customise tags
+<img width="832" height="619" alt="image" src="https://github.com/user-attachments/assets/b9ba7a2c-0752-4115-a591-7c0fe1a762e3" />
 
 Visual style/tag selector designed for music-generation workflows such as YuE2.  
 Incoming generated styles can be reviewed, removed, or supplemented with user-selected tags from configurable categories.  
