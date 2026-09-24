@@ -8,10 +8,8 @@ A collection of custom ComfyUI nodes for audio editing, splitting, mixing, lyric
 The package is designed to keep common audio tasks inside ComfyUI while providing interactive visual controls.  
 Several nodes support optional transcription, stem-separation, and music-analysis features.
 
-## Tutorial video
-[![Watch the video](https://img.youtube.com/vi/K6ad04HWETs/hqdefault.jpg)](https://www.youtube.com/watch?v=K6ad04HWETs)
 
-
+.
 ## Included Nodes
 ### URN Audio Lyrics (Automatically Retrieves lyrics and music tags online)
 Automatically Retrieves lyrics for songs or transcribes them when online lyrics cannot be found. 
@@ -75,6 +73,10 @@ Can work by output length or end position and passes the processed audio back in
 Interactive text-review node that pauses the workflow until the user accepts the current text.  
 The text can be edited directly, saved to a `.txt` file, or replaced by loading an existing `.txt` file.  
 Only **Accept Changes** resumes downstream workflow execution.
+
+
+## Tutorial video
+[![Watch the video](https://img.youtube.com/vi/K6ad04HWETs/hqdefault.jpg)](https://www.youtube.com/watch?v=K6ad04HWETs)
 
 
 .
