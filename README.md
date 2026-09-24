@@ -23,6 +23,7 @@ Splits longer audio into manageable chunks while attempting to avoid cutting thr
 Can use Whisper analysis and optional Mel-RoFormer vocal/music separation to improve cut placement.  
 Supports vocal/music stem export, vocal chunks, transcript sidecars, and FLAC/MP3 chunk output.
 ### URN Audio Mixer
+<img width="1027" height="529" alt="image" src="https://github.com/user-attachments/assets/74dedf52-183d-4056-bd00-ad7f9f4a7257" />
 
 A visual multi-track audio mixer for arranging and combining multiple clips inside ComfyUI.  
 Clips can be positioned and adjusted independently with trim, fades, and track-level controls.  
