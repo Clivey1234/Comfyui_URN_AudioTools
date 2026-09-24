@@ -20,6 +20,7 @@ Visual style/tag selector designed for music-generation workflows such as YuE2.
 Incoming generated styles can be reviewed, removed, or supplemented with user-selected tags from configurable categories.  
 Tabs and available styles are loaded from JSON, and custom user tags can be added and saved directly from the node.
 ### URN Audio Smart Splitter
+<img width="355" height="605" alt="image" src="https://github.com/user-attachments/assets/1abb016e-6eb5-4f23-ad94-cec158a6a51e" />
 
 Splits longer audio into manageable chunks while attempting to avoid cutting through vocals or words.  
 Can use Whisper analysis and optional Mel-RoFormer vocal/music separation to improve cut placement.  
