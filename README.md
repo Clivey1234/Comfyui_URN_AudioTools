@@ -62,7 +62,7 @@ Can work by output length or end position and passes the processed audio back in
 
 .
 ### URN Text Edit (automatically puases workflow until user accepts Lyrics changes)
-<img width="493" height="608" alt="image" src="https://github.com/user-attachments/assets/86d30624-f0b4-46bb-b7e7-2898b8dc6bf3" />
+<img width="400" height="500" alt="image" src="https://github.com/user-attachments/assets/86d30624-f0b4-46bb-b7e7-2898b8dc6bf3" />
 
 Interactive text-review node that pauses the workflow until the user accepts the current text.  
 The text can be edited directly, saved to a `.txt` file, or replaced by loading an existing `.txt` file.  
