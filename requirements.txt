@@ -1,0 +1,8 @@
+# URN Audio Tools - combined non-core dependencies
+# ComfyUI already supplies torch, numpy and PyAV in normal portable installs.
+faster-whisper==1.2.1
+audio-separator[cpu]==0.44.5
+librosa>=0.11.0
+scipy>=1.13.0
+
+soundfile>=0.13.1

@@ -1,0 +1,89 @@
+URN Smart Seamless Audio Extender
+==================================
+
+PURPOSE
+-------
+Extend audio to a requested duration by finding a suitable internal loop point and repeating it with crossfades designed to hide the join.
+
+INPUTS / SETTINGS
+-----------------
+audio_file
+- Optional file picker for a source audio file in ComfyUI input.
+- Used only when audio_input is not connected.
+
+audio_input
+- Optional connected AUDIO input.
+- When connected, this ALWAYS takes priority over audio_file.
+- A stale or deleted filename still displayed in the audio_file picker is ignored while a valid AUDIO cable is connected.
+- This priority is enforced at validation and runtime, so changing the upstream Load Audio file does not require reconnecting the cable.
+
+output_length
+- Desired final duration in seconds.
+- If the requested duration is shorter than or equal to the source, the node simply trims to that duration and no loop is needed.
+
+mode
+- Music: prioritizes beat/rhythm/harmony-aware loop matching.
+- Ambience: prioritizes smooth texture and seam continuity rather than musical bars.
+- Generic: general-purpose matching when the source is neither clearly music nor ambience.
+
+analysis_engine
+- Advanced (Librosa): detailed music/feature analysis using the normal high-quality analysis path.
+- Advanced (SoXR HQ): similar advanced analysis but uses SoXR HQ resampling for analysis.
+- Basic (V5): older/faster fallback loop finder with less detailed structural analysis.
+
+loop_preference
+- Auto: lets the analysis choose the most suitable phrase length.
+- 4 Bars: favors loop candidates around four musical bars.
+- 8 Bars: favors eight-bar phrases.
+- 16 Bars: favors sixteen-bar phrases.
+- Long Phrase: favors a longer musical phrase rather than a short repeating loop.
+
+extension_mode
+- Best Internal Loop: finds the best internal loop region and builds the extension around that region.
+- Preserve Full Input: plays the complete original source once, then loops from the selected internal loop start after the source reaches its natural end.
+
+search_quality
+- Fast: fewer candidates; quickest analysis.
+- Balanced: moderate search depth.
+- Thorough: deeper search and the default recommendation.
+- Maximum: largest search effort; slowest but explores the most candidates.
+
+minimum_loop_seconds
+- Minimum acceptable duration of the loop region.
+- Helps prevent very short, obviously repetitive loops.
+
+crossfade_mode
+- Auto (Recommended): chooses a crossfade based on the source, mode, BPM and loop segment.
+- Manual: uses Crossfade Seconds exactly as supplied.
+
+crossfade_seconds
+- Manual crossfade length in seconds.
+- Only directly controls the join when Crossfade Mode = Manual.
+
+final_fade_seconds
+- Adds a fade-out at the very end of the completed output.
+
+peak_protect
+- True: reduces the final output only if necessary to prevent clipping.
+- False: leaves levels untouched even if a crossfade or source peak exceeds the safe range.
+
+OUTPUTS
+-------
+audio
+- Extended AUDIO result.
+
+detected_bpm
+- Detected BPM as a FLOAT when available.
+- May be 0 when BPM is not meaningful or cannot be detected.
+
+info
+- Detailed STRING report including source/output duration, loop start/end, loop duration, crossfade, confidence and analysis information.
+
+total_dur_out
+- Actual final duration in seconds as a FLOAT.
+
+NOTES
+-----
+- Preserve Full Input is useful when you want listeners to hear the complete original track before repetition starts.
+- Best Internal Loop is useful when the most seamless looping section matters more than preserving every part of the source.
+- V9.70 fixed stale picker validation: connected audio_input is authoritative whenever it is present.

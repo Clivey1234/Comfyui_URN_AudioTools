@@ -1,0 +1,129 @@
+URN Audio Lyrics
+================
+
+PURPOSE
+-------
+Create lyrics/transcript text from a connected AUDIO source. When online lookup is enabled, the node tries to identify the song, lets the user correct the identity manually if necessary, retrieves online lyrics, and uses Whisper only as the final fallback.
+
+INPUTS / SETTINGS
+-----------------
+audio_input
+- Required AUDIO input.
+- Connect a standard ComfyUI Load Audio node or any other AUDIO output.
+- Audio_out passes this input through unchanged.
+
+Song
+- True: treat the source as a song. The node may isolate vocals temporarily, attempt conservative Verse/Chorus structure detection for Whisper transcription, and generate Music_Description.
+- False: perform straightforward transcription without song-structure analysis; Music_Description is normally empty.
+
+Include timestamps
+- False: Transcript_Out is readable plain text.
+- True: when LRCLIB provides synced lyrics they are converted to SRT-style text. Whisper fallback also produces SRT-style timestamps.
+- Lyrics.ovh is plain lyrics only, so a Lyrics.ovh result remains plain text even when this option is enabled.
+
+Get Online Lyrics
+- True (default): use the interactive online identification/lyrics flow described below.
+- False: skip online lookup and use local Whisper transcription directly.
+
+Status line
+- Display-only status directly below Get Online Lyrics.
+- Shows stages such as Searching online song titles, Waiting for song selection, Getting genre, Analysing music, Getting lyrics, Transcribing lyrics, Detecting song structure and Complete.
+
+ONLINE LYRICS FLOW
+------------------
+When Get Online Lyrics is enabled, the intended sequence is:
+
+1. Automatic filename-based search
+   - The node reads the CURRENT filename from the connected upstream Load Audio/file widget.
+   - Changing the selected file in the same Load Audio node refreshes the filename even when the cable remains connected.
+   - The filename is used to guess Artist - Song Title and produce an alphabetically sorted title list.
+
+2. Automatic result panel
+   - Accept: use the selected artist/title and continue online.
+   - Reject / Manual Search: keep the workflow paused and open the manual search stage.
+   - Stop Workflow: cancel the current ComfyUI workflow cleanly.
+
+3. Manual artist-search stage
+   - Enter an artist name in the Artist name field.
+   - Click Search Artist (or press Enter).
+   - Matching titles for that artist are loaded into the title dropdown.
+   - Use Selected: use the chosen title and continue online.
+   - Reject / Use Whisper: reject the manual search and fall back to Whisper.
+   - Stop Workflow: cancel the current workflow.
+   - If an artist search returns no titles, the user can edit the artist name and search again without resuming the workflow.
+
+4. Confirmed-song online lookup
+   - MusicBrainz metadata lookup runs for the confirmed artist/title.
+   - LRCLIB is tried first for lyrics.
+   - Lyrics.ovh is tried second.
+   - If neither service supplies usable lyrics, the node offers/uses the manual-search path before Whisper when appropriate; Whisper is the final fallback.
+
+LYRIC PROVIDER ORDER
+--------------------
+For a confirmed song identity:
+1. LRCLIB
+2. Lyrics.ovh
+3. Whisper only after online/manual identification paths have failed or been rejected
+
+LRCLIB
+- Free/no-key source.
+- Uses confirmed artist/title plus source duration and album metadata when available.
+- When Include timestamps is enabled and synced LRC lyrics are available, they are converted to SRT-style Transcript_Out.
+
+Lyrics.ovh
+- Plain lyrics fallback after LRCLIB.
+- Does not provide synced timestamps.
+
+Whisper
+- Local final fallback transcription.
+- In Song mode, the node can use lyric repetition/timing and supporting beat/bar analysis to attempt conservative [Verse N] / [Chorus] labels.
+- Structure labels are heuristic and are not official metadata.
+
+MUSIC DESCRIPTION
+-----------------
+When Song is enabled and a song identity is confirmed, Music_Description is a comma-separated STRING for downstream style/music prompting.
+
+MusicBrainz contributes:
+- Recording/release/artist genre and community-style tags when available.
+- The confirmed title is tried exactly first.
+- If confidence is poor, a fallback search removes common release/remaster decorations such as `(2015 Remaster)`, `[Remastered]`, `- Remastered 2011`, `(Deluxe Edition)` and `(Album Version)`.
+- Meaningful recording qualifiers such as Live, Remix and Acoustic are preserved.
+
+MusicBrainz tag filtering (V9.73)
+- Community-edited tags are filtered BEFORE they reach Music_Description.
+- The editable blocklist is:
+      urn_musicbrainz_tag_blocklist.json
+- Matching is normalized and whole-word based where appropriate to reduce accidental substring matches.
+- Built-in default blocked terms remain active if the JSON file is missing or malformed.
+
+Librosa contributes only:
+- measured BPM
+- `female lead vocal` or `male lead vocal` when the isolated-vocal pitch result is sufficiently clear
+
+Librosa does NOT add generic local guesses for genre, production style, timbre, groove, bass character, dynamic range or vocal register to Music_Description.
+
+OUTPUTS
+-------
+Transcript_Out
+- STRING containing LRCLIB lyrics, Lyrics.ovh lyrics or Whisper transcript, depending on which source succeeds.
+- With Include timestamps enabled, LRCLIB synced lyrics and Whisper fallback are SRT-style timestamped text.
+
+Duration_Seconds
+- FLOAT containing the full source audio duration in seconds.
+
+Music_Description
+- Single-line comma-separated STRING using filtered MusicBrainz tags plus available BPM and optional conservative lead-vocal label.
+
+Audio_out
+- AUDIO passthrough of the exact connected audio_input.
+- No gain, resampling or transcription-related modification is applied.
+
+IMPORTANT BEHAVIOUR
+-------------------
+- V9.61: Stop Workflow was added to the interactive song-selection panel.
+- V9.62: MusicBrainz exact-title lookup gained cleaned remaster/edition fallback search.
+- V9.63: the current upstream filename is refreshed every prompt, fixing stale-song lookup when the Load Audio selection changes but its cable stays connected.
+- V9.72: rejecting the automatic song match now opens Manual Artist Search instead of immediately using Whisper. Whisper is the final fallback.
+- V9.73: MusicBrainz community tags are filtered through urn_musicbrainz_tag_blocklist.json before Music_Description is emitted.
+- The on-node player was removed in V9.58; online filename detection comes from the upstream audio loader/file widget.
+- The obsolete V9.67 LRCLIB Lyricsfile experiment is not part of this accepted branch.

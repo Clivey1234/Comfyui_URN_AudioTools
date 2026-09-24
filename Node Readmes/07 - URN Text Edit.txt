@@ -1,0 +1,54 @@
+URN Text Edit
+=============
+
+PURPOSE
+-------
+Interactive workflow gate for reviewing and manually editing a STRING before downstream nodes continue.
+
+INPUTS
+------
+source
+- Required STRING input.
+- Connect any text output that you want to review or modify.
+
+HOW IT WORKS
+------------
+1. When workflow execution reaches URN Text Edit, the incoming text is placed in the large editor.
+2. The workflow pauses at this node.
+3. Edit the text as required.
+4. Optional: click Save Changes to save the current editor text as a .txt file, or Load Existing to load a .txt file into the editor. Neither action resumes the workflow.
+5. Click Accept Changes.
+6. The edited text is returned through the STRING output and downstream execution continues.
+
+Save Changes
+- Opens the browser/OS save-file picker when supported.
+- Saves the current editor contents as a .txt file only.
+- Does NOT resume the workflow.
+
+Load Existing
+- Opens the browser/OS open-file picker when supported.
+- Loads a .txt file into the editor, replacing the current editor text.
+- Does NOT resume the workflow.
+
+Accept Changes
+- Confirms the current contents of the editor.
+- This is the only one of the three buttons that resumes the workflow.
+- There is no separate automatic accept; user interaction is intentional.
+
+OUTPUTS
+-------
+STRING
+- The final accepted text, including any manual changes made in the editor.
+
+IMPORTANT BEHAVIOUR
+-------------------
+- The node is intentionally configured as an execution root/output node so ComfyUI does not prune it when a downstream node lazily consumes the string.
+- It is intentionally non-cacheable/always-changed so the pause/edit/accept step happens on every queued workflow.
+- Text files are written only when Save Changes is explicitly clicked.
+- Loading or saving a .txt file never counts as accepting the edit.
+
+RESIZING
+--------
+- The editor can be resized down to approximately 205 x 270 pixels (about half the original 410 x 540 size).
+- The text area automatically grows/shrinks with the node.
+- Your resized node dimensions are respected when the workflow is saved and reloaded.

@@ -1,0 +1,93 @@
+URN Audio Mixer
+===============
+
+PURPOSE
+-------
+A lightweight multi-track timeline mixer for combining several audio files into one AUDIO output. Each track can contain multiple clips with independent position, trim and fades.
+
+MAIN CONTROLS
+-------------
+Add Track
+- Adds an empty mixer track.
+
+Drop audio files in the top area
+- Each dropped file creates a new track containing that file.
+
+PREVIEW AUDIO / STOP PREVIEW
+- Plays a browser-side preview of the current mix without running the full ComfyUI workflow.
+- While previewing, the master slider, Play Pos readout and orange playhead move together.
+
+Preview Position Slider
+- Chooses where preview playback starts.
+- Moving it while stopped immediately moves the orange playhead in every track.
+
+PAD START (Secs)
+- Whole seconds of silence added before the exported used audio span.
+- Default: 0.
+
+PAD END (Secs)
+- Whole seconds of silence added after the exported used audio span.
+- Default: 0.
+
+Play Pos
+- Live preview/playhead position readout.
+
+Export Length
+- Live calculated final output length, including Pad Start and Pad End.
+
+TRACK CONTROLS
+--------------
+Track Volume
+- 0-100% volume for every clip on that track.
+
+Add Audio File
+- Adds another clip to that same track.
+- New clips are initially placed immediately after the current rightmost used clip on the track.
+
+Remove File
+- Removes only the currently selected clip on that track.
+- Click a clip to select it; the selected clip is outlined in red.
+
+Remove Track
+- Removes that entire track and its clips.
+
+CLIP / TIMELINE CONTROLS
+------------------------
+Drag clip horizontally
+- Moves the clip left/right on the master timeline.
+- Position is stored in real seconds, so timing remains stable if the timeline later grows.
+
+Trim Start / Trim End
+- Outer trim handles select the used portion of that clip.
+- Trimmed-away audio is not included in the final export.
+
+Fade In / Fade Out
+- Diamond handles control clip fade durations.
+- New clips default to Fade In and Fade Out equal to 5% of that source file's duration.
+- Fade handles cannot cross each other.
+
+Waveform
+- Shows the source footprint, trimmed region and fade shapes.
+- Multiple clips on the same track share one horizontal lane and may overlap or have gaps.
+
+EXPORT BEHAVIOUR
+----------------
+- The output automatically begins at the earliest used/trimmed clip position across all tracks.
+- It ends at the furthest used/trimmed clip end.
+- Relative gaps and overlaps inside that used span are preserved.
+- PAD START and PAD END are then added around that span.
+- Final peak protection only reduces the mix when summed tracks would otherwise clip.
+
+PERSISTENCE
+-----------
+Mixer state is stored with the workflow, including tracks, clips, file names, positions, trim values, fades, track volume and padding.
+
+OUTPUTS
+-------
+audio
+- Final mixed AUDIO result.
+
+NOTES
+-----
+- There are no separate per-track AUDIO outputs; everything is mixed to one result.
+- The internal mix_state_json widget is implementation storage and normally should not be edited manually.

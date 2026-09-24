@@ -1,0 +1,60 @@
+URN Audio Channel
+=================
+
+PURPOSE
+-------
+Visual stereo channel utility for adjusting left/right level, swapping channels, static panning, or moving a sound across the stereo field over the full clip duration.
+
+INPUTS / SETTINGS
+-----------------
+audio_input
+- Required AUDIO input.
+- Mono audio is automatically converted to stereo so panning can work.
+
+Left Volume
+- Left-channel level from 0-200%.
+- 100% = unchanged.
+- Below 100% reduces the left channel; above 100% boosts it.
+
+Right Volume
+- Right-channel level from 0-200%.
+- 100% = unchanged.
+
+Swap L / R
+- Off: leave channels in their original positions.
+- On: exchange the left and right channels.
+
+Pan
+- Used when Auto Pan = Off.
+- -100 = fully left.
+- 0 = centre.
+- +100 = fully right.
+- The large Stereo Position handle provides the visual control for this setting.
+
+Auto Pan
+- Off: use the static Pan position.
+- Left -> Right: sound moves from full left to full right over the complete input duration.
+- Right -> Left: sound moves from full right to full left over the complete input duration.
+
+Movement Curve / Pan Curve
+- Cosine: smooth acceleration/deceleration through the stereo field; recommended for natural fly-by movement.
+- Linear: position changes at a constant rate from one side to the other.
+
+Prevent Clipping
+- On: if the processed result would exceed the safe digital peak range, the whole result is reduced just enough to avoid clipping.
+- Off: keep the requested gains exactly, even if clipping occurs.
+
+Reset
+- Restores the visual controls to their default values.
+
+OUTPUTS
+-------
+audio
+- Processed stereo AUDIO.
+
+EXAMPLE
+-------
+For a plane passing from left to right:
+- Auto Pan = Left -> Right
+- Pan Curve = Cosine
+- Leave Left/Right Volume at 100% unless level correction is also needed.

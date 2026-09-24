@@ -1,0 +1,73 @@
+URN Audio Trim Fade
+===================
+
+PURPOSE
+-------
+Trim an incoming AUDIO signal, add fade-in/fade-out, optionally normalize or change gain, and optionally pad the result with silence to a requested duration.
+
+INPUTS / SETTINGS
+-----------------
+audio_input
+- Required AUDIO connection.
+- Usually connect a standard ComfyUI Load Audio node or any other AUDIO output.
+
+Length
+- Requested output duration in seconds when Trim Mode = Length.
+- 0 means use all remaining audio after Start Sec.
+
+Start Sec
+- Absolute starting position in the source audio, in seconds.
+- Example: 30 starts processing at 00:30.
+
+Fade In Sec
+- Length of the fade-in from silence to full level.
+- Default: 3 seconds.
+
+Fade Out Sec
+- Length of the fade-out from full level to silence.
+- Default: 3 seconds.
+
+Curve
+- cosine: smoother, more natural-sounding fade shape. Recommended for most audio.
+- linear: changes level at a constant rate.
+
+Pad If Short
+- True: if the requested duration extends beyond the available source audio, silence is added at the end so the requested duration is still reached.
+- False: output stops when the real source audio ends.
+
+gain_db
+- Final volume adjustment in decibels.
+- 0 dB = unchanged.
+- Negative values reduce volume; positive values increase volume.
+
+normalize
+- False: keep the original peak level before gain_db is applied.
+- True: peak-normalize the trimmed real audio to 0 dBFS first, then apply gain_db.
+
+Trim Mode
+- Length: Start Sec + Length defines the selected section.
+- End Sec: Start Sec and End Sec define absolute positions in the original audio.
+
+End Sec
+- Used only when Trim Mode = End Sec.
+- Absolute end position in the source audio.
+- Example: Start Sec = 30 and End Sec = 42 produces a 12-second section.
+
+VISUAL EDITOR
+-------------
+- Outer handles control trim start/end.
+- Diamond handles control Fade In/Fade Out.
+- The waveform display reflects the chosen trim and fade curve.
+- Preview Changes auditions the current edit locally without needing to run the whole workflow.
+
+OUTPUTS
+-------
+audio
+- Processed AUDIO result.
+
+audio_duration
+- Final output duration in seconds as a FLOAT.
+
+NOTES
+-----
+- Fades, normalization and gain are applied to the real audible portion before any requested silence padding is added.

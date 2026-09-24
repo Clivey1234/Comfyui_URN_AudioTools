@@ -1,0 +1,73 @@
+URN Audio Style Selector
+========================
+
+PURPOSE
+-------
+Interactive visual review/edit node for a comma-separated music-style STRING.
+
+INPUT
+-----
+Generated_Styles (STRING)
+- Connect a generated style string such as URN Audio Lyrics -> Music_Description.
+- Incoming/generated tags are placed in the green selected-style area and shown in GREY.
+
+VISUAL EDITOR
+-------------
+Tabs
+- Tabs across the top are created dynamically from the top-level keys in urn_audio_style_selector_styles.json.
+- Adding a new top-level JSON section automatically creates another tab.
+- The bundled categories include Genre, Vocals, Instruments, Mood, Production, Tempo, Era, BPM and User Custom.
+
+Available tags panel
+- The large available-tags area is BLACK.
+- Tag label text is WHITE, including inactive/already-selected tags.
+- Click an available tag to add it to the current selection.
+- The active tab decides which category of tags is shown.
+
+Selected styles panel
+- The selected-style area is GREEN.
+- GREY tags came through Generated_Styles.
+- PURPLE tags were added by the user.
+- Click ANY selected tag to remove it, including generated grey tags.
+
+Quick Custom
+- A short text field sits below the selected-style area.
+- Type a missing tag and click ADD QUICK CUSTOM, or press Enter.
+- The tag is immediately added to the current selection as a PURPLE user addition.
+- The same tag is also saved permanently into the User Custom section of urn_audio_style_selector_styles.json.
+- The User Custom tab remains visible even when it is empty.
+
+Accept Changes
+- ACCEPT CHANGES is the workflow gate.
+- It outputs all currently selected tags through Final_Styles and resumes downstream execution.
+
+OUTPUT
+------
+Final_Styles (STRING)
+- All tags remaining in the selected-style box, joined as one comma-separated style string.
+
+EDITABLE PRESET FILE
+--------------------
+urn_audio_style_selector_styles.json
+
+- Stored beside urn_audio_style_selector.py.
+- Top-level keys become tabs automatically.
+- Each value is a list of tags for that tab.
+- User Custom is writable from Quick Custom.
+- Current preset lists are alphabetically sorted for easier browsing.
+- BPM is kept in natural numeric order rather than alphabetic string order.
+
+Example:
+{
+  "Genre": ["alternative rock", "funk", "pop rock"],
+  "Mood": ["dark", "dreamy", "uplifting"],
+  "User Custom": []
+}
+
+NOTES
+-----
+- The JSON is read fresh, so hand-edited categories/tags can be picked up without changing Python code.
+- Keep the JSON valid: every top-level section except the last needs a comma after its closing `]`.
+- V9.68 changed the available-tags panel from yellow to black.
+- V9.69 keeps available-tag text white instead of greying the label itself.
+- V9.71 sorted preset tag lists alphabetically while preserving numeric BPM ordering.

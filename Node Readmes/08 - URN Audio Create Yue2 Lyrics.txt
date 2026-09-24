@@ -1,0 +1,68 @@
+URN Audio Create Yue2 Lyrics
+============================
+
+Purpose
+-------
+Creates completely new song lyrics for YuE2 from a user-entered Theme / Story, while using a YuE2 ABC score as the musical timing and vocal-phrasing reference.
+
+The node uses ComfyUI's native text-generation model interface. Ollama is NOT required.
+
+Recommended wiring
+------------------
+1. Load a native ComfyUI text model such as Qwen3 / Qwen3.5 with the appropriate CLIP loader.
+2. Connect its CLIP output -> clip.
+3. Connect YuE2 Generate ABC -> abc.
+4. Optionally connect the original/extracted lyrics -> source_lyrics.
+5. Enter the new Theme / Story.
+6. Connect new_lyrics -> YuE2 Generate Music / lyrics.
+7. Connect this node's abc output (or the original YuE2 Generate ABC output directly) -> YuE2 Generate Music / abc.
+
+Inputs
+------
+clip
+    Native ComfyUI text-generation CLIP/model connection. Qwen3/Qwen3.5 is recommended.
+
+abc
+    Required STRING from YuE2 Generate ABC.
+
+source_lyrics
+    Optional original lyrics. They are supplied to the model only as a structural reference. The prompt explicitly tells the model not to copy, paraphrase, or preserve distinctive wording.
+
+Theme / Story
+    What the new song should be about.
+
+Creativity
+    0.00 to 1.00. Controls text-generation temperature and how adventurous the lyric-writing brief is.
+
+Syllable Fit
+    0 to 100. Higher values ask the model to match lyric density more closely to vocal note attacks in the ABC.
+
+Rhyme Strength
+    0 to 100. Higher values ask for stronger/more frequent rhyme while still prioritising natural language.
+
+Max Tokens
+    Maximum generated text length. Default 2048.
+
+seed
+    Text-generation seed.
+
+Outputs
+-------
+new_lyrics
+    Finished lyric STRING, ready for YuE2 Generate Music / lyrics.
+
+abc
+    The incoming ABC passed through unchanged for convenient wiring into YuE2 Generate Music / abc.
+
+analysis
+    Human-readable analysis of key, meter, tempo, sections and detected vocal note attacks.
+
+How the ABC is used
+-------------------
+The node scans only the V: Vocal material when building its rhythm map. Instrumental voices are ignored for lyric-density calculations. Section comments such as % verse, % chorus and % bridge are retained as structural guidance.
+
+The parser is deliberately conservative. The full ABC score is also supplied to the language model so unusual ties, pickups, tuplets or other notation still remain available as context.
+
+Model notes
+-----------
+This node does not bundle an LLM. The workflow recipient needs a ComfyUI-native text-generation model installed. This avoids requiring Ollama or a separate background server.

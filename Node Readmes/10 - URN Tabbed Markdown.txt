@@ -1,0 +1,68 @@
+URN Tabbed Markdown
+===================
+
+PURPOSE
+-------
+A display-only tabbed Markdown note for documenting a ComfyUI workflow without taking up space with several separate Markdown Note nodes.
+
+This node has NO inputs and NO outputs. It does not alter or process workflow data.
+
+TABS
+----
+- Click a tab to display its Markdown page.
+- Click + to add a new blank tab.
+- Click - to remove the currently selected tab.
+- At least one tab is always kept.
+- Double-click a tab name to rename it.
+- Up to 40 tabs can be stored in one node.
+
+MARKDOWN
+--------
+- Double-click the note area to edit the active tab as raw Markdown.
+- Press Ctrl+Enter (Cmd+Enter on macOS) or click outside the editor to return to rendered preview.
+- The Markdown text and tab names are stored with the workflow.
+
+Supported display syntax includes:
+- # Headings
+- **bold** and *italic*
+- ~~strikethrough~~
+- Bulleted and numbered lists
+- Blockquotes
+- Inline code and fenced code blocks
+- Horizontal rules
+- Links
+- Basic Markdown tables
+
+NOTES
+-----
+- Raw HTML is deliberately escaped for safer workflow sharing.
+- The node is for workflow documentation/display only; it has no execution output.
+- Resize the node to give long notes more room.
+
+APPEARANCE
+----------
+- Uses the same brown/tan visual palette as ComfyUI's built-in Markdown Note.
+- Dark brown node title/header, warm brown content background, and white Markdown text.
+- Tabs and editing controls use matching brown tones while keeping the active tab visually distinct.
+
+
+MARKDOWN RENDERING (V9.78)
+--------------------------
+- Preview mode now uses ComfyUI's own Markdown rendering service when available.
+- This follows the same GFM/CommonMark-style formatting as ComfyUI Markdown content, including:
+  headings (# through ######), bold, italic, strike-through, nested lists, numbered lists, blockquotes, links, tables and fenced/inline code.
+- ComfyUI sanitises rendered HTML before it is displayed.
+- A small built-in fallback renderer is retained only for older ComfyUI frontends that do not expose the Markdown renderer.
+
+WORKFLOW PERSISTENCE (V9.79)
+----------------------------
+- Tab names, active tab and Markdown text are saved inside the ComfyUI workflow.
+- Editing marks the workflow dirty immediately, so normal ComfyUI workflow/autosave handling sees each change.
+- The node stores its state in workflow serialization but excludes that state from the backend execution prompt.
+- Saving/reloading the workflow, browser refresh, and normal ComfyUI graph restoration should preserve the tabbed note.
+- If serialization occurs while the textarea is still being edited, the live textarea content is saved before the workflow JSON is produced.
+
+
+V9.80
+- Tab titles display at their full width and are no longer truncated with an ellipsis.
+- Long tab names wrap onto additional rows with the existing tab strip instead of being shortened.

@@ -1,0 +1,17 @@
+URN Audio Nodes - Per-Node Readme Index
+=====================================
+
+These files are written to be copied/pasted into workflow Note nodes beside the matching URN node.
+
+1. 01 - URN Audio Trim Fade.txt
+2. 02 - URN Smart Seamless Audio Extender.txt
+3. 03 - URN Audio Smart Splitter.txt
+4. 04 - URN Audio Mixer.txt
+5. 05 - URN Audio Channel.txt
+6. 06 - URN Audio Lyrics.txt
+7. 07 - URN Text Edit.txt
+8. 08 - URN Audio Create Yue2 Lyrics.txt
+9. 09 - URN Audio Style Selector.txt
+10. 10 - URN Tabbed Markdown.txt
+
+The readmes describe purpose, user-visible inputs/settings, outputs and important workflow behaviour for the current V9.76 package.
