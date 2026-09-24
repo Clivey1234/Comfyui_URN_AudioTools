@@ -31,6 +31,7 @@ A visual multi-track audio mixer for arranging and combining multiple clips insi
 Clips can be positioned and adjusted independently with trim, fades, and track-level controls.  
 Useful for assembling generated music, vocals, effects, or other audio elements into a final mix.
 ### URN Audio Channel
+<img width="480" height="480" alt="image" src="https://github.com/user-attachments/assets/313a8933-c58d-4d85-9001-a6d968d8e1d2" />
 
 Provides straightforward stereo-channel processing for connected audio.  
 Includes left/right level control, channel swapping, static panning, and whole-clip auto-pan.  
