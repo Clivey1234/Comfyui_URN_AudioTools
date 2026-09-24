@@ -8,7 +8,9 @@ A collection of custom ComfyUI nodes for audio editing, splitting, mixing, lyric
 The package is designed to keep common audio tasks inside ComfyUI while providing interactive visual controls.  
 Several nodes support optional transcription, stem-separation, and music-analysis features.
 
-Tutorial: https://www.youtube.com/watch?v=K6ad04HWETs
+<a href="https://youtu.be/K6ad04HWETs">
+  <img src="https://www.youtube.com/watch?v=K6ad04HWETs/maxresdefault.jpg" width="480" alt="Watch the video">
+</a>
 
 
 ## Included Nodes
