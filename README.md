@@ -5,7 +5,7 @@ The package is designed to keep common audio tasks inside ComfyUI while providin
 Several nodes support optional transcription, stem-separation, and music-analysis features.
 
 ## Included Nodes
-### URN Audio Lyrics (gets online Lyrics for Yue2 etc)
+### URN Audio Lyrics (Automatically Retrieves lyrics online)
 <img width="493" height="612" alt="image" src="https://github.com/user-attachments/assets/2b995ffc-26e8-4d50-9b82-a8c7c19af5ea" />
 
 Automatically Retrieves lyrics for songs or transcribes them when online lyrics cannot be found.  
