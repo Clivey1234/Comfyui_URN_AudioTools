@@ -145,12 +145,11 @@ python -m pip install -r "ComfyUI/custom_nodes/URN Audio Nodes/requirements.txt"
 
 Where visible node names have changed, internal node IDs have been preserved where possible so existing workflows continue to load correctly.
 
-## Documentation
+## Connections external
 
-More detailed per-node documentation is included in:
-
-```text
-URN Audio Nodes/Node Readmes/
-```
-
-These files can also be copied into ComfyUI Markdown/Note nodes and placed beside the matching node in a workflow.
+LRCLIB — fetches online lyrics and synced lyrics when available.
+Lyrics.ovh — fallback lyrics lookup and artist/title suggestions.
+MusicBrainz — fetches genre/style metadata for Music_Description.
+Hugging Face — downloads Faster-Whisper models when they are not cached locally.
+audio-separator model host — downloads the Mel-RoFormer checkpoint on first use if missing.
+PyPI / pip package index — installs Python dependencies from requirements.txt.
