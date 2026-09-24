@@ -18,7 +18,7 @@ Automatically Retrieves lyrics for songs or transcribes them when online lyrics 
 
 Automatically Retrieves lyrics for songs or transcribes them when online lyrics cannot be found.  
 Supports automatic title detection, interactive song selection, manual artist/title search, and Whisper as the final fallback.  
-It can also output duration, filtered MusicBrainz style information, BPM analysis, and the original audio.
+
 
 
 .
