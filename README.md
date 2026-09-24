@@ -37,6 +37,7 @@ Provides straightforward stereo-channel processing for connected audio.
 Includes left/right level control, channel swapping, static panning, and whole-clip auto-pan.  
 Designed as a lightweight utility node for quick stereo adjustments.
 ### URN Audio Trim Fade
+<img width="640" height="540" alt="image" src="https://github.com/user-attachments/assets/ad56ad6b-cae4-49ac-8e7f-7f752bb5cc37" />
 
 Visual trim, fade, gain, normalization, and silence-padding utility for connected audio.  
 Includes an interactive waveform editor with start/end and fade controls, plus local preview support.  
