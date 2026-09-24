@@ -9,6 +9,8 @@ from .urn_text_edit import URNTextEdit
 from .urn_audio_create_yue2_lyrics import URNAudioCreateYue2Lyrics
 from .urn_audio_style_selector import URNAudioStyleSelector
 from .urn_tabbed_markdown import URNTabbedMarkdown
+from .urn_save_audio_with_lyrics import URNSaveAudioWithLyrics
+from .urn_load_audio import URNLoadAudio
 
 
 class URNAudioNodesExtension(ComfyExtension):
@@ -24,6 +26,8 @@ class URNAudioNodesExtension(ComfyExtension):
             URNAudioCreateYue2Lyrics,
             URNAudioStyleSelector,
             URNTabbedMarkdown,
+            URNSaveAudioWithLyrics,
+            URNLoadAudio,
         ]
 
 
@@ -43,4 +47,6 @@ __all__ = [
     "URNAudioCreateYue2Lyrics",
     "URNAudioStyleSelector",
     "URNTabbedMarkdown",
+    "URNSaveAudioWithLyrics",
+    "URNLoadAudio",
 ]

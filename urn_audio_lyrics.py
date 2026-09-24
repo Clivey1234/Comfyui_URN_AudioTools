@@ -52,6 +52,9 @@ NODE_TAG = "[URN Audio Lyrics]"
 LYRICS_OVH_EVENT = "urn_audio_nodes.audio_lyrics.lookup_request"
 LYRICS_OVH_RESPONSE_ROUTE = "/urn_audio_nodes/audio_lyrics/lookup_response"
 LYRICS_OVH_PENDING_ROUTE = "/urn_audio_nodes/audio_lyrics/lookup_pending"
+EMBEDDED_LYRICS_EVENT = "urn_audio_nodes.audio_lyrics.embedded_request"
+EMBEDDED_LYRICS_RESPONSE_ROUTE = "/urn_audio_nodes/audio_lyrics/embedded_response"
+EMBEDDED_LYRICS_PENDING_ROUTE = "/urn_audio_nodes/audio_lyrics/embedded_pending"
 STATUS_EVENT = "urn_audio_nodes.audio_lyrics.status"
 
 # MusicBrainz is community-edited.  Filter terms that are unsuitable for
@@ -116,6 +119,8 @@ def _musicbrainz_term_blocked(name: str) -> bool:
 
 _lyrics_ovh_waiters = {}
 _lyrics_ovh_waiters_lock = threading.Lock()
+_embedded_lyrics_waiters = {}
+_embedded_lyrics_waiters_lock = threading.Lock()
 
 
 def _log(message: str):
@@ -589,15 +594,16 @@ def _recording_artist_name(recording: dict) -> str:
     return " ".join(parts).strip()
 
 
-def _musicbrainz_description(artist: str, title: str) -> str:
+def _musicbrainz_description_and_recording(artist: str, title: str):
     """
-    Return a database-backed, comma-separated style/genre description for a confirmed song.
-    The terms are MusicBrainz community genres/tags; no audio-derived style categories are invented here.
+    Return (description, recording_id) for a confirmed song.
+    Description is database-backed MusicBrainz genre/style metadata; recording_id
+    is reused by the automatic album lookup so the recording search is not repeated.
     """
     artist = str(artist or "").strip()
     title = str(title or "").strip()
     if not artist or not title:
-        return ""
+        return "", ""
 
     try:
         # First try the confirmed title exactly. If that does not produce a confident
@@ -607,7 +613,6 @@ def _musicbrainz_description(artist: str, title: str) -> str:
         artist_key = _lookup_key(artist)
         best = None
         best_score = -1.0
-        matched_query_title = title
         variants = _musicbrainz_title_variants(title)
 
         for variant_index, query_title in enumerate(variants):
@@ -627,8 +632,12 @@ def _musicbrainz_description(artist: str, title: str) -> str:
                     continue
                 rec_title = str(rec.get("title") or "")
                 rec_artist = _recording_artist_name(rec)
-                title_similarity = difflib.SequenceMatcher(None, title_key, _lookup_key(rec_title), autojunk=False).ratio()
-                artist_similarity = difflib.SequenceMatcher(None, artist_key, _lookup_key(rec_artist), autojunk=False).ratio()
+                title_similarity = difflib.SequenceMatcher(
+                    None, title_key, _lookup_key(rec_title), autojunk=False
+                ).ratio()
+                artist_similarity = difflib.SequenceMatcher(
+                    None, artist_key, _lookup_key(rec_artist), autojunk=False
+                ).ratio()
                 try:
                     server_score = float(rec.get("score") or 0.0) / 100.0
                 except Exception:
@@ -641,7 +650,6 @@ def _musicbrainz_description(artist: str, title: str) -> str:
             if variant_best is not None and variant_best_score > best_score:
                 best = variant_best
                 best_score = variant_best_score
-                matched_query_title = query_title
 
             # A confident exact-title result wins immediately. Otherwise allow the
             # cleaned fallback title to have a chance on the next pass.
@@ -653,7 +661,6 @@ def _musicbrainz_description(artist: str, title: str) -> str:
                     )
                 best = variant_best
                 best_score = variant_best_score
-                matched_query_title = query_title
                 break
 
         if not best or best_score < 0.62:
@@ -665,7 +672,7 @@ def _musicbrainz_description(artist: str, title: str) -> str:
                 )
             else:
                 _log(f"MusicBrainz: recording match confidence was too low for {artist} - {title}.")
-            return ""
+            return "", ""
 
         recording_id = str(best.get("id") or "").strip()
         artist_id = ""
@@ -747,10 +754,270 @@ def _musicbrainz_description(artist: str, title: str) -> str:
             _log(f"Music_Description from MusicBrainz metadata: {description}")
         else:
             _log(f"MusicBrainz returned no useful genre/style tags for {artist} - {title}.")
-        return description
+        return description, recording_id
     except Exception as exc:
         _log(f"MusicBrainz metadata lookup failed: {exc}")
+        return "", str(locals().get("recording_id") or "").strip()
+
+
+def _musicbrainz_description(artist: str, title: str) -> str:
+    # Compatibility wrapper for any external/local callers that only need tags.
+    return _musicbrainz_description_and_recording(artist, title)[0]
+
+
+def _musicbrainz_album_for_recording(recording_id: str, expected_artist: str = "") -> str:
+    """Automatically choose the most appropriate original artist release for a recording.
+
+    Hard exclusions:
+      - Various Artists releases
+      - Compilation release-groups
+      - Live / Remix release-groups
+      - Releases credited to a different known artist
+
+    Ranking among the remaining candidates is Official -> Album -> EP -> Single ->
+    non-edition title -> earliest release.
+    """
+    recording_id = str(recording_id or "").strip()
+    expected_artist = str(expected_artist or "").strip()
+    if not recording_id:
         return ""
+
+    def _fetch_releases(official_only=True):
+        params = {
+            "recording": recording_id,
+            "inc": "release-groups+artist-credits",
+            "limit": 100,
+            "type": "album|ep|single",
+        }
+        if official_only:
+            params["status"] = "official"
+        payload = _musicbrainz_get_json("release/", params)
+        return payload.get("releases") or [] if isinstance(payload, dict) else []
+
+    def _artist_credit(entity):
+        names, ids = [], []
+        credits = entity.get("artist-credit") or [] if isinstance(entity, dict) else []
+        if not isinstance(credits, list):
+            credits = [credits]
+        for credit in credits:
+            if not isinstance(credit, dict):
+                continue
+            artist_obj = credit.get("artist") or {}
+            if not isinstance(artist_obj, dict):
+                artist_obj = {}
+            name = str(credit.get("name") or artist_obj.get("name") or "").strip()
+            artist_id = str(artist_obj.get("id") or "").strip()
+            if name:
+                names.append(name)
+            if artist_id:
+                ids.append(artist_id)
+        return names, ids
+
+    def _artist_matches(names):
+        expected_key = _lookup_key(expected_artist)
+        if not expected_key or not names:
+            return True
+        for name in names:
+            key = _lookup_key(name)
+            if not key:
+                continue
+            if key == expected_key or key in expected_key or expected_key in key:
+                return True
+            if difflib.SequenceMatcher(None, key, expected_key, autojunk=False).ratio() >= 0.82:
+                return True
+        return False
+
+    try:
+        releases = _fetch_releases(official_only=True)
+        if not releases:
+            releases = _fetch_releases(official_only=False)
+        if not releases:
+            _log("MusicBrainz album lookup returned no releases for the matched recording.")
+            return ""
+
+        primary_rank = {"album": 0, "ep": 1, "single": 2}
+        secondary_penalty = {
+            "dj-mix": 25,
+            "mixtape/street": 25,
+            "demo": 20,
+            "soundtrack": 10,
+        }
+        hard_reject_secondary = {"compilation", "live", "remix"}
+        edition_words = (
+            "deluxe", "remaster", "remastered", "expanded", "anniversary",
+            "special edition", "collector's edition", "collectors edition", "reissue",
+        )
+        various_artists_id = "89ad4ac3-39f7-470e-963a-56509c546377"
+        reject_counts = {"compilation/live/remix": 0, "various artists": 0, "artist mismatch": 0}
+
+        candidates = {}
+        for release in releases:
+            if not isinstance(release, dict):
+                continue
+            group = release.get("release-group") or {}
+            if not isinstance(group, dict):
+                group = {}
+
+            album_title = str(group.get("title") or release.get("title") or "").strip()
+            if not album_title:
+                continue
+
+            primary_type = str(group.get("primary-type") or "").strip().casefold()
+            secondary_types = group.get("secondary-types") or []
+            if not isinstance(secondary_types, list):
+                secondary_types = [secondary_types]
+            secondary_types = [str(x or "").strip().casefold() for x in secondary_types]
+
+            # These are never acceptable as the Album output. There is deliberately
+            # no final fallback to compilations, Various Artists, live or remix releases.
+            if any(x in hard_reject_secondary for x in secondary_types):
+                reject_counts["compilation/live/remix"] += 1
+                continue
+
+            credit_names, credit_ids = _artist_credit(group)
+            if not credit_names and not credit_ids:
+                credit_names, credit_ids = _artist_credit(release)
+            credit_keys = {_lookup_key(name) for name in credit_names if name}
+            if various_artists_id in credit_ids or "various artists" in credit_keys:
+                reject_counts["various artists"] += 1
+                continue
+            if expected_artist and credit_names and not _artist_matches(credit_names):
+                reject_counts["artist mismatch"] += 1
+                continue
+
+            type_score = primary_rank.get(primary_type, 3)
+            secondary_score = sum(secondary_penalty.get(x, 0) for x in secondary_types)
+            title_key = album_title.casefold()
+            edition_score = 15 if any(word in title_key for word in edition_words) else 0
+
+            date = str(group.get("first-release-date") or release.get("date") or "").strip()
+            date_key = date if re.match(r"^\d{4}(?:-\d{2})?(?:-\d{2})?$", date) else "9999-99-99"
+
+            status = str(release.get("status") or "").strip().casefold()
+            status_score = 0 if status in {"", "official"} else 50
+            # If artist credits are unexpectedly absent, keep the candidate but rank
+            # it below one explicitly credited to the accepted artist.
+            artist_score = 0 if credit_names else 5
+
+            sort_key = (
+                status_score,
+                artist_score,
+                type_score,
+                secondary_score,
+                edition_score,
+                date_key,
+                title_key,
+            )
+            group_key = str(group.get("id") or title_key).strip()
+            previous = candidates.get(group_key)
+            if previous is None or sort_key < previous[0]:
+                candidates[group_key] = (sort_key, album_title, primary_type, date)
+
+        rejected = ", ".join(f"{k}={v}" for k, v in reject_counts.items() if v)
+        if rejected:
+            _log(f"MusicBrainz album lookup exclusions: {rejected}.")
+
+        if not candidates:
+            _log(
+                "MusicBrainz album lookup found no acceptable original-artist Album/EP/Single; "
+                "Album output will remain blank."
+            )
+            return ""
+
+        _key, album_title, primary_type, date = min(candidates.values(), key=lambda item: item[0])
+        kind = primary_type.title() if primary_type else "Release"
+        when = f" ({date})" if date else ""
+        _log(f"MusicBrainz album lookup selected {kind}: {album_title}{when}.")
+        return album_title
+    except Exception as exc:
+        _log(f"MusicBrainz album lookup failed: {exc}")
+        return ""
+
+
+@PromptServer.instance.routes.post(EMBEDDED_LYRICS_RESPONSE_ROUTE)
+async def urn_audio_lyrics_embedded_response(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"ok": False, "error": "Invalid JSON payload."}, status=400)
+
+    token = str(payload.get("token") or "")
+    node_id = str(payload.get("node_id") or "")
+    action = str(payload.get("action") or "continue").lower()
+    if not token:
+        return web.json_response({"ok": False, "error": "Missing embedded lyrics token."}, status=400)
+    if action not in {"use", "continue", "stop"}:
+        return web.json_response({"ok": False, "error": "Invalid action."}, status=400)
+
+    with _embedded_lyrics_waiters_lock:
+        waiter = _embedded_lyrics_waiters.get(token)
+        if waiter is None:
+            return web.json_response({"ok": False, "error": "This embedded lyrics request is no longer active."}, status=404)
+        if node_id and node_id != waiter["node_id"]:
+            return web.json_response({"ok": False, "error": "Node ID mismatch."}, status=409)
+        waiter["action"] = action
+        waiter["event"].set()
+
+    return web.json_response({"ok": True, "complete": True})
+
+
+@PromptServer.instance.routes.get(EMBEDDED_LYRICS_PENDING_ROUTE)
+async def urn_audio_lyrics_embedded_pending(request):
+    with _embedded_lyrics_waiters_lock:
+        pending = [
+            {
+                "token": token,
+                "node_id": waiter["node_id"],
+                "lyrics": waiter["lyrics"],
+                "artist": waiter.get("artist", ""),
+                "title": waiter.get("title", ""),
+            }
+            for token, waiter in _embedded_lyrics_waiters.items()
+            if not waiter["event"].is_set()
+        ]
+    return web.json_response({"ok": True, "pending": pending})
+
+
+def _wait_for_embedded_lyrics_choice(node_id: str, lyrics: str, artist: str = "", title: str = ""):
+    token = uuid.uuid4().hex
+    event = threading.Event()
+    waiter = {
+        "event": event,
+        "node_id": str(node_id),
+        "lyrics": str(lyrics or ""),
+        "artist": str(artist or ""),
+        "title": str(title or ""),
+        "action": "continue",
+    }
+    with _embedded_lyrics_waiters_lock:
+        _embedded_lyrics_waiters[token] = waiter
+
+    try:
+        PromptServer.instance.send_sync(
+            EMBEDDED_LYRICS_EVENT,
+            {
+                "token": token,
+                "node_id": str(node_id),
+                "lyrics": waiter["lyrics"],
+                "artist": waiter["artist"],
+                "title": waiter["title"],
+            },
+        )
+        _log("Embedded lyrics supplied; waiting for Use Embedded Lyrics or Ignore / Search Online.")
+        while not event.wait(0.10):
+            if model_management is not None:
+                model_management.throw_exception_if_processing_interrupted()
+
+        if waiter["action"] == "stop":
+            _send_status(str(node_id), "Workflow stopped by user")
+            _log("Embedded lyrics selection stopped by user; interrupting the current workflow.")
+            if model_management is not None and hasattr(model_management, "InterruptProcessingException"):
+                raise model_management.InterruptProcessingException()
+            raise RuntimeError("URN Audio Lyrics: workflow stopped by user.")
+        return waiter["action"]
+    finally:
+        with _embedded_lyrics_waiters_lock:
+            _embedded_lyrics_waiters.pop(token, None)
 
 
 @PromptServer.instance.routes.post(LYRICS_OVH_RESPONSE_ROUTE)
@@ -1760,28 +2027,36 @@ def _estimate_vocal_prompt(vocal_source_path: str):
         return []
 
 
-def _music_prompt_analysis(source_path: str, vocal_source_path: str = None):
+def _music_prompt_analysis(
+    source_path: str,
+    vocal_source_path: str = None,
+    include_bpm: bool = True,
+    include_gender: bool = False,
+    need_bundle: bool = True,
+):
     """Build the local part of Music_Description from Librosa measurements only.
 
-    Genre/style terms come from MusicBrainz. Librosa contributes only:
-      * measured BPM
-      * female lead vocal / male lead vocal, when the isolated vocal pitch is clear
-
-    The advanced feature bundle is still returned because the song-structure detector
-    reuses its beat/music analysis internally; those extra measurements are not emitted
-    into ``Music_Description``.
+    Song Analysis controls the BPM/music-feature work used for structure detection.
+    Gender Vocal Determination independently controls the conservative male/female
+    lead-vocal label.  The expensive music feature bundle is skipped when neither
+    BPM nor structure analysis needs it.
     """
     try:
-        waveform, sample_rate = _load_comfy_audio(source_path)
-        mono_t = _analysis_signal(waveform)
-        bundle = _advanced_feature_bundle(mono_t, sample_rate, "Advanced (Librosa)")
-
+        bundle = None
         tags = []
-        bpm = float(bundle.get("bpm", 0.0) or 0.0) if isinstance(bundle, dict) else 0.0
-        if bpm > 0:
-            tags.append(f"{int(round(bpm))} BPM")
 
-        tags.extend(_estimate_vocal_prompt(vocal_source_path))
+        if include_bpm or need_bundle:
+            waveform, sample_rate = _load_comfy_audio(source_path)
+            mono_t = _analysis_signal(waveform)
+            bundle = _advanced_feature_bundle(mono_t, sample_rate, "Advanced (Librosa)")
+
+            if include_bpm:
+                bpm = float(bundle.get("bpm", 0.0) or 0.0) if isinstance(bundle, dict) else 0.0
+                if bpm > 0:
+                    tags.append(f"{int(round(bpm))} BPM")
+
+        if include_gender:
+            tags.extend(_estimate_vocal_prompt(vocal_source_path))
 
         clean = []
         seen = set()
@@ -1793,7 +2068,7 @@ def _music_prompt_analysis(source_path: str, vocal_source_path: str = None):
                 clean.append(tag)
         return ", ".join(clean), bundle
     except Exception as exc:
-        _log(f"Librosa BPM/vocal analysis unavailable: {exc}")
+        _log(f"Librosa music analysis unavailable: {exc}")
         return "", None
 
 def _merge_music_descriptions(*parts):
@@ -1880,8 +2155,8 @@ def _section_starts(sections):
 
 def _prepare_song_analysis_source(source_path: str):
     """
-    Try to isolate vocals for song transcription. The stem is temporary and is never
-    saved as a user output. Failure falls back to the original mix so the node remains simple.
+    Try to isolate vocals for song transcription or vocal-gender analysis. The stem is
+    temporary and is never saved as a user output. Failure falls back to the original mix.
     """
     temp_base = folder_paths.get_temp_directory()
     os.makedirs(temp_base, exist_ok=True)
@@ -1895,12 +2170,12 @@ def _prepare_song_analysis_source(source_path: str):
         )
         vocal_path = next((path for path in paths if path.lower().endswith("_vocals.flac")), None)
         if vocal_path and os.path.isfile(vocal_path) and os.path.getsize(vocal_path) > 0:
-            _log(f"Song mode: using temporary Mel-RoFormer vocal stem for Whisper ({device}).")
+            _log(f"Vocal isolation: using temporary Mel-RoFormer vocal stem ({device}).")
             return vocal_path, temp_root
         raise RuntimeError("Mel-RoFormer did not return a usable vocal stem.")
     except Exception as exc:
         shutil.rmtree(temp_root, ignore_errors=True)
-        _log(f"Song mode vocal isolation unavailable; using original mix instead. {exc}")
+        _log(f"Vocal isolation unavailable; using original mix instead. {exc}")
         return source_path, None
 
 
@@ -1913,9 +2188,10 @@ class URNAudioLyrics(io.ComfyNode):
             category="URN Audio Tools",
             description=(
                 "Simple audio-to-text transcription from a connected AUDIO input. "
-                "Optional online lyric lookup parses Artist - Title filenames, offers an alphabetical song dropdown, then if the automatic match is missing/rejected lets the user manually search by artist before Whisper is used as the final fallback. Stop Workflow remains available at either selection stage. Accepted titles try LRCLIB first and Lyrics.ovh second. "
-                "Song mode optionally isolates vocals and combines lyric repetition with beat/bar-aware musical structure for conservative Verse/Chorus detection. "
-                "Include timestamps outputs standard SRT text through Transcript_Out when Whisper is used, and also uses LRCLIB synced lyrics when available. Music_Description uses MusicBrainz genres/tags when a song is confirmed, plus only two Librosa-derived items: BPM and a conservative male/female lead-vocal label when detectable. MusicBrainz tries the confirmed title first, then retries with common remaster/release suffixes removed if needed. If MusicBrainz has no useful tags, the description contains only those available Librosa items."
+                "When embedded lyrics are connected (normally from URN Load Audio), they are shown first for Use/Ignore confirmation before any external lyric lookup. Optional Artist/Title/Album metadata is preferred over filename parsing. "
+                "Optional online lyric lookup then offers an alphabetical song dropdown, and if the automatic match is missing/rejected lets the user manually search by artist before Whisper is used as the final fallback. Stop Workflow remains available at each interactive stage. Accepted titles try LRCLIB first and Lyrics.ovh second. "
+                "Song Analysis controls song-specific processing, BPM/music-feature analysis, temporary vocal isolation for Whisper fallback, and conservative Verse/Chorus detection. Gender Vocal Determination independently controls whether the node performs isolated-vocal pitch analysis for a conservative male/female lead-vocal label. "
+                "Include timestamps outputs standard SRT text through Transcript_Out when Whisper is used, and also uses LRCLIB synced lyrics when available. Artist, Title and Album outputs expose the identity the user accepted, whether from embedded metadata or the online selection panel. Missing Album metadata is filled automatically from MusicBrainz without an extra user prompt. Music_Description uses MusicBrainz genres/tags when a song is confirmed, BPM when Song Analysis is enabled, and a conservative male/female lead-vocal label when Gender Vocal Determination is enabled and detectable. MusicBrainz tries the confirmed title first, then retries with common remaster/release suffixes removed if needed."
             ),
             is_output_node=True,
             inputs=[
@@ -1923,13 +2199,52 @@ class URNAudioLyrics(io.ComfyNode):
                 io.Boolean.Input("song", default=True),
                 io.Boolean.Input("include_timestamps", default=False),
                 io.Boolean.Input("get_lyrics_ovh", default=True),
+                io.String.Input(
+                    "embedded_lyrics",
+                    display_name="Embedded Lyrics",
+                    default="",
+                    optional=True,
+                    force_input=True,
+                    tooltip="Optional embedded lyrics, normally connected from URN Load Audio.",
+                ),
+                io.String.Input(
+                    "artist_in",
+                    display_name="Artist",
+                    default="",
+                    optional=True,
+                    force_input=True,
+                    tooltip="Optional artist metadata, normally connected from URN Load Audio.",
+                ),
+                io.String.Input(
+                    "title_in",
+                    display_name="Title",
+                    default="",
+                    optional=True,
+                    force_input=True,
+                    tooltip="Optional title metadata, normally connected from URN Load Audio.",
+                ),
+                io.String.Input(
+                    "album_in",
+                    display_name="Album",
+                    default="",
+                    optional=True,
+                    force_input=True,
+                    tooltip="Optional album metadata, normally connected from URN Load Audio. If blank, a confirmed Artist/Title is used for automatic MusicBrainz album lookup.",
+                ),
                 io.String.Input("source_filename_hint", default=""),
+                # Append the new widget after every V9.88 widget so saved workflow
+                # widget-value positions remain compatible. source_filename_hint is
+                # hidden by the frontend but still serialized as a widget value.
+                io.Boolean.Input("gender_vocal_determination", default=True),
             ],
             outputs=[
                 io.String.Output(display_name="Transcript_Out"),
                 io.Float.Output("Duration_Seconds"),
                 io.String.Output(display_name="Music_Description"),
                 io.Audio.Output("Audio_out"),
+                io.String.Output("Artist"),
+                io.String.Output("Title"),
+                io.String.Output("Album"),
             ],
             hidden=[io.Hidden.unique_id],
         )
@@ -1940,12 +2255,12 @@ class URNAudioLyrics(io.ComfyNode):
     # audio_input required, and execute() performs the final runtime sanity check.
 
     @classmethod
-    def fingerprint_inputs(cls, audio_input=None, song=True, include_timestamps=False, get_lyrics_ovh=True, source_filename_hint="", **kwargs):
+    def fingerprint_inputs(cls, audio_input=None, song=True, include_timestamps=False, get_lyrics_ovh=True, gender_vocal_determination=True, embedded_lyrics="", artist_in="", title_in="", album_in="", source_filename_hint="", **kwargs):
         # Connected AUDIO may change even when the graph shape does not, and lookup mode is interactive.
         return float("nan")
 
     @classmethod
-    def execute(cls, audio_input=None, song=True, include_timestamps=False, get_lyrics_ovh=True, source_filename_hint="") -> io.NodeOutput:
+    def execute(cls, audio_input=None, song=True, include_timestamps=False, get_lyrics_ovh=True, gender_vocal_determination=True, embedded_lyrics="", artist_in="", title_in="", album_in="", source_filename_hint="") -> io.NodeOutput:
         node_id = str(cls.hidden.unique_id)
         _send_status(node_id, "Preparing audio...")
         if audio_input is None:
@@ -1965,36 +2280,70 @@ class URNAudioLyrics(io.ComfyNode):
         if total_duration <= 0:
             raise ValueError("The selected audio has no usable duration.")
 
-        song = bool(song)
+        # Keep the internal input name ``song`` for workflow compatibility, but its
+        # visible label is now Song Analysis.
+        song_analysis = bool(song)
+        gender_vocal_determination = bool(gender_vocal_determination)
         include_timestamps = bool(include_timestamps)
         get_lyrics_ovh = bool(get_lyrics_ovh)
+        embedded_lyrics = str(embedded_lyrics or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+        artist_in = str(artist_in or "").strip()
+        title_in = str(title_in or "").strip()
+        album_in = str(album_in or "").strip()
 
-        # If the user confirms a Lyrics.ovh song identity, keep the resulting
+        # If the user confirms a song identity, keep the resulting
         # MusicBrainz + Librosa description even when Lyrics.ovh itself cannot
         # return lyric text and we later fall back to Whisper for Transcript_Out.
         confirmed_music_description = ""
         confirmed_music_bundle = None
+        accepted_artist = ""
+        accepted_title = ""
+        accepted_album = ""
 
-        def _try_confirmed_online_choice(choice):
-            nonlocal confirmed_music_description, confirmed_music_bundle
+        def _metadata_album_for_identity(artist="", title=""):
+            if not album_in:
+                return ""
+            # Use connected Album metadata unless the connected Artist/Title explicitly
+            # contradict the identity the user accepted in the online selector.
+            if artist_in and artist and _lookup_key(artist_in) != _lookup_key(artist):
+                return ""
+            if title_in and title and _lookup_key(title_in) != _lookup_key(title):
+                return ""
+            return album_in
 
-            # A title has been confirmed by the user. MusicBrainz metadata is
-            # independent of which lyric provider ultimately succeeds.
-            _send_status(node_id, "Getting genre...")
-            mb_description = _musicbrainz_description(
-                choice["artist"], choice["title"]
-            )
+        def _build_confirmed_music_description(artist="", title="", album_hint=""):
+            nonlocal confirmed_music_description, confirmed_music_bundle, accepted_album
 
-            _send_status(node_id, "Analysing music...")
+            accepted_album = str(album_hint or "").strip() or _metadata_album_for_identity(artist, title)
+            if accepted_album:
+                _log(f"Using connected Album metadata: {accepted_album}.")
+
+            mb_description = ""
+            recording_id = ""
+            if artist and title:
+                _send_status(node_id, "Getting MusicBrainz metadata...")
+                mb_description, recording_id = _musicbrainz_description_and_recording(artist, title)
+                if not accepted_album and recording_id:
+                    accepted_album = _musicbrainz_album_for_recording(recording_id, artist)
+                if not accepted_album:
+                    _log("No confident Album metadata was available; Album output will be blank.")
+
             librosa_temp_root = None
             librosa_vocal_source = None
             try:
-                if song:
+                if gender_vocal_determination:
+                    _send_status(node_id, "Determining vocal gender...")
                     librosa_source, librosa_temp_root = _prepare_song_analysis_source(source_path)
                     if librosa_source != source_path:
                         librosa_vocal_source = librosa_source
+                if song_analysis:
+                    _send_status(node_id, "Analysing music...")
                 librosa_description, confirmed_music_bundle = _music_prompt_analysis(
-                    source_path, vocal_source_path=librosa_vocal_source
+                    source_path,
+                    vocal_source_path=librosa_vocal_source,
+                    include_bpm=song_analysis,
+                    include_gender=gender_vocal_determination,
+                    need_bundle=song_analysis,
                 )
             except Exception as exc:
                 librosa_description = ""
@@ -2020,10 +2369,11 @@ class URNAudioLyrics(io.ComfyNode):
                 )
             else:
                 confirmed_music_description = librosa_description
-                _description_console(
-                    "MusicBrainz", False,
-                    "no usable genre/style tags; using Librosa only",
-                )
+                if artist and title:
+                    _description_console(
+                        "MusicBrainz", False,
+                        "no usable genre/style tags; using Librosa only",
+                    )
                 if confirmed_music_description:
                     _description_console("Librosa", True, confirmed_music_description)
                 else:
@@ -2032,11 +2382,23 @@ class URNAudioLyrics(io.ComfyNode):
                         "local librosa audio analysis returned no description",
                     )
 
+        def _try_confirmed_online_choice(choice):
+            nonlocal accepted_artist, accepted_title, accepted_album
+            # A title has been confirmed by the user. Preserve that exact accepted
+            # identity for the Artist/Title outputs even if both online lyric
+            # providers later fail and Whisper becomes the transcript fallback.
+            accepted_artist = str(choice.get("artist") or "").strip()
+            accepted_title = str(choice.get("title") or "").strip()
+            accepted_album = ""
+
+            # MusicBrainz metadata is independent of which lyric provider ultimately succeeds.
+            _build_confirmed_music_description(accepted_artist, accepted_title)
+
             # Confirmed artist/title lyric retrieval: LRCLIB first, then Lyrics.ovh.
             _send_status(node_id, "Getting lyrics from LRCLIB...")
             lrclib_result = _lrclib_fetch(
-                choice["artist"],
-                choice["title"],
+                accepted_artist,
+                accepted_title,
                 total_duration,
                 choice.get("album") or "",
             )
@@ -2057,7 +2419,8 @@ class URNAudioLyrics(io.ComfyNode):
                     print(f"URN Lyrics: Lyrics LRCLIB - SUCCESS - {timing_note}")
                     _send_status(node_id, "Complete")
                     return io.NodeOutput(
-                        lrclib_text, float(total_duration), confirmed_music_description, audio_input
+                        lrclib_text, float(total_duration), confirmed_music_description, audio_input,
+                        accepted_artist, accepted_title, accepted_album
                     )
 
             print("URN Lyrics: Lyrics LRCLIB - FAILED - trying Lyrics.ovh")
@@ -2080,11 +2443,38 @@ class URNAudioLyrics(io.ComfyNode):
                     )
                 _send_status(node_id, "Complete")
                 return io.NodeOutput(
-                    fetched_lyrics, float(total_duration), confirmed_music_description, audio_input
+                    fetched_lyrics, float(total_duration), confirmed_music_description, audio_input,
+                    accepted_artist, accepted_title, accepted_album
                 )
 
             print("URN Lyrics: Lyrics Lyrics.ovh - FAILED")
             return None
+
+        # Embedded lyrics supplied by URN Load Audio get first refusal before any
+        # online lyric provider. Rejecting them continues into the existing online
+        # sequence (or directly to Whisper when Get Online Lyrics is disabled).
+        if embedded_lyrics:
+            _send_status(node_id, "Embedded lyrics found — waiting for choice...")
+            embedded_action = _wait_for_embedded_lyrics_choice(
+                node_id, embedded_lyrics, artist_in, title_in
+            )
+            if embedded_action == "use":
+                accepted_artist = artist_in
+                accepted_title = title_in
+                _log("Using embedded lyrics from the connected audio metadata.")
+                print("URN Lyrics: Lyrics Embedded Metadata - SUCCESS - plain lyrics")
+                if include_timestamps:
+                    _log(
+                        "Include timestamps is enabled, but embedded USLT/LYRICS metadata "
+                        "does not provide synced timestamps; returning plain lyrics."
+                    )
+                _build_confirmed_music_description(artist_in, title_in, album_in)
+                _send_status(node_id, "Complete")
+                return io.NodeOutput(
+                    embedded_lyrics, float(total_duration), confirmed_music_description, audio_input,
+                    accepted_artist, accepted_title, accepted_album
+                )
+            _log("Embedded lyrics were ignored; continuing to the normal lyric lookup sequence.")
 
         # Online lyrics mode is intentionally interactive. The filename is parsed as
         # "Artist - Title" first. If automatic title discovery fails, or the user
@@ -2092,8 +2482,15 @@ class URNAudioLyrics(io.ComfyNode):
         if get_lyrics_ovh:
             lookup_name = str(source_filename_hint or "").strip()
             parsed = _filename_artist_title(lookup_name)
-            if parsed:
-                parsed_artist, guessed_title = parsed
+            file_artist, file_title = parsed if parsed else ("", "")
+            parsed_artist = artist_in or file_artist
+            guessed_title = title_in or file_title
+            if parsed_artist:
+                if artist_in or title_in:
+                    _log(
+                        f"Using connected metadata for online identity: artist={parsed_artist!r}, "
+                        f"title={guessed_title!r}."
+                    )
                 _send_status(node_id, "Searching online song titles...")
                 options = _lyrics_ovh_suggestions(parsed_artist, guessed_title)
                 lookup_mode = "automatic" if options else "manual"
@@ -2152,13 +2549,15 @@ class URNAudioLyrics(io.ComfyNode):
 
         analysis_source = source_path
         song_temp_root = None
-        if song:
+        if song_analysis:
             analysis_source, song_temp_root = _prepare_song_analysis_source(source_path)
 
         _send_status(node_id, "Transcribing lyrics...")
         _log(
             f"Transcribing {source_label} ({total_duration:.2f}s) | "
-            f"Song={'True' if song else 'False'} | Include timestamps={'True' if include_timestamps else 'False'}."
+            f"Song Analysis={'True' if song_analysis else 'False'} | "
+            f"Gender Vocal Determination={'True' if gender_vocal_determination else 'False'} | "
+            f"Include timestamps={'True' if include_timestamps else 'False'}."
         )
         pbar = ProgressBar(100) if ProgressBar is not None else None
         if pbar is not None:
@@ -2179,18 +2578,43 @@ class URNAudioLyrics(io.ComfyNode):
                 patience=3.0,
                 pbar=pbar,
             )
-            if song:
-                vocal_prompt_source = analysis_source if analysis_source != source_path else None
-                # If Lyrics.ovh already confirmed the song, MusicBrainz + Librosa were
-                # analysed before lyric retrieval. Reuse that description/bundle so a
-                # failed Lyrics.ovh lyric fetch does not overwrite the confirmed result.
-                if music_bundle is None:
-                    _send_status(node_id, "Analysing music...")
-                    local_description, music_bundle = _music_prompt_analysis(
-                        source_path, vocal_source_path=vocal_prompt_source
-                    )
-                    if not music_description:
-                        music_description = local_description
+            if song_analysis or gender_vocal_determination:
+                # Reuse the Whisper vocal stem when Song Analysis already created one.
+                # When only Gender Vocal Determination is enabled, create a temporary
+                # vocal stem solely for the pitch classification.
+                vocal_prompt_source = (
+                    analysis_source
+                    if gender_vocal_determination and analysis_source != source_path
+                    else None
+                )
+                gender_temp_root = None
+                if gender_vocal_determination and vocal_prompt_source is None:
+                    _send_status(node_id, "Determining vocal gender...")
+                    gender_source, gender_temp_root = _prepare_song_analysis_source(source_path)
+                    if gender_source != source_path:
+                        vocal_prompt_source = gender_source
+                try:
+                    # If an online identity was already confirmed, MusicBrainz/Librosa
+                    # may already have produced the description/bundle. Reuse it.
+                    if music_bundle is None or (gender_vocal_determination and not music_description):
+                        if song_analysis:
+                            _send_status(node_id, "Analysing music...")
+                        local_description, local_bundle = _music_prompt_analysis(
+                            source_path,
+                            vocal_source_path=vocal_prompt_source,
+                            include_bpm=song_analysis,
+                            include_gender=gender_vocal_determination,
+                            need_bundle=song_analysis,
+                        )
+                        if music_bundle is None:
+                            music_bundle = local_bundle
+                        if local_description:
+                            music_description = _merge_music_descriptions(
+                                music_description, local_description
+                            )
+                finally:
+                    if gender_temp_root:
+                        shutil.rmtree(gender_temp_root, ignore_errors=True)
         finally:
             if song_temp_root:
                 shutil.rmtree(song_temp_root, ignore_errors=True)
@@ -2202,19 +2626,19 @@ class URNAudioLyrics(io.ComfyNode):
 
         sections = []
         structure_detected = False
-        if song:
+        if song_analysis:
             _send_status(node_id, "Detecting song structure...")
             sections, structure_detected = _build_song_sections(
                 transcript_segments, music_source_path=source_path, music_bundle=music_bundle
             )
 
         if include_timestamps:
-            if song and structure_detected:
+            if song_analysis and structure_detected:
                 transcript_out = _segments_to_srt(transcript_segments, _section_starts(sections))
             else:
                 transcript_out = _segments_to_srt(transcript_segments)
         else:
-            if song and structure_detected:
+            if song_analysis and structure_detected:
                 transcript_out = _sections_to_plain_text(transcript_segments, sections)
             else:
                 transcript_out = _segments_to_plain_text(transcript_segments)
@@ -2225,23 +2649,29 @@ class URNAudioLyrics(io.ComfyNode):
             except Exception:
                 pass
 
-        if song:
+        if song_analysis:
             if structure_detected:
                 _log("Song structure detected; Transcript_Out includes automatic Verse/Chorus labels.")
             else:
                 _log("No confident repeated chorus detected; returning transcription without structure labels.")
         else:
-            _log("Song mode is off; Verse/Chorus detection skipped.")
-        if song:
+            _log("Song Analysis is off; Verse/Chorus detection skipped.")
+        if song_analysis or gender_vocal_determination:
             if music_description:
                 _log(f"Music_Description: {music_description}")
                 _description_console("Librosa", True, music_description)
             else:
                 _log("Music_Description was not available for this audio; returning an empty string.")
-                _description_console("Librosa", False, "local librosa audio analysis returned no description")
+                _description_console("Librosa", False, "local music analysis returned no description")
         else:
-            _description_console("Librosa", False, "Song mode is off; description analysis skipped")
+            _description_console(
+                "Librosa", False,
+                "Song Analysis and Gender Vocal Determination are both off; local description analysis skipped",
+            )
         _log(f"Finished transcription: {len(transcript_segments)} subtitle segments.")
         print("URN Lyrics: Lyrics Whisper - SUCCESS - transcription fallback used")
         _send_status(node_id, "Complete")
-        return io.NodeOutput(transcript_out, float(total_duration), music_description, audio_input)
+        return io.NodeOutput(
+            transcript_out, float(total_duration), music_description, audio_input,
+            accepted_artist, accepted_title, accepted_album
+        )

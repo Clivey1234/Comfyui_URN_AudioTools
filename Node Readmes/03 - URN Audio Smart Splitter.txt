@@ -1,0 +1,106 @@
+URN Audio Smart Splitter
+========================
+
+VISIBLE NAME / COMPATIBILITY
+----------------------------
+- Current visible node name: URN Audio Smart Splitter.
+- Previous visible name: URN Smart Audio Splitter.
+- Internal node ID remains URNSmartAudioChunker, so existing workflows remain compatible.
+
+PURPOSE
+-------
+Automatically split a song or spoken audio into safe-length chunks while trying not to cut through words. It can transcribe the source, use isolated vocals to improve cut safety, export matching vocal chunks, and export full vocal/instrumental stems.
+
+INPUTS / SETTINGS
+-----------------
+audio
+- MP3/WAV/FLAC file picker.
+
+audio_input
+- Optional connected AUDIO input.
+- When connected, the connected AUDIO is used and is temporarily materialized for processing.
+
+target_length
+- Preferred chunk duration in seconds.
+- The splitter tries to place each cut near this length while respecting Minimum Length, Maximum Length and safe word gaps.
+
+minimum_length
+- Shortest allowed chunk duration.
+- Minimum allowed setting: 5 seconds.
+
+maximum_length
+- Longest allowed chunk duration.
+- Maximum allowed setting: 60 seconds.
+- Target Length must remain between Minimum Length and Maximum Length.
+
+vocal_safety
+- Strong: more conservative word-edge clearance and wider vocal-energy safety checks before choosing a cut.
+- Normal: slightly less conservative clearance, useful when Strong makes it difficult to find enough suitable cut points.
+
+whisper_model
+- tiny: fastest / lowest transcription accuracy.
+- base: faster, modest accuracy.
+- small: middle ground.
+- medium: default; good accuracy/speed balance.
+- large-v3: highest Whisper model quality here, but slowest and most demanding.
+
+analysis_device
+- Auto: choose an available device automatically.
+- CUDA: prefer NVIDIA GPU processing.
+- CPU: force CPU processing.
+
+beam_size
+- Whisper decoding beam width, 1-20.
+- Larger values search more transcription alternatives and can improve accuracy at the cost of speed.
+
+patience
+- Whisper beam-search patience, 1.0-5.0.
+- Higher values allow the decoder to search longer for alternatives; slower but potentially more accurate.
+
+output_format
+- FLAC: lossless chunk output; recommended/default.
+- MP3: compressed chunk output.
+
+export_vocal_stem
+- True: save the full isolated vocal stem from Mel-RoFormer.
+- False: do not save the full vocal stem unless it is still temporarily needed by another enabled feature.
+
+use_vocal_stem_for_analysis
+- True: use the isolated vocals for Whisper/cut-safety analysis when available.
+- False: analyse the original full mix.
+
+export_vocal_chunks
+- True: export sample-aligned vocal-only chunks matching every main audio chunk.
+- False: do not write vocal-only chunks.
+
+export_music_stem
+- True: save the full instrumental/music-without-vocals stem.
+- False: do not save the instrumental stem.
+
+OUTPUT FOLDERS
+--------------
+The node creates a source-specific folder under ComfyUI/output/audio_chunks/.
+Typical subfolders include:
+- chunks/          main audio chunks
+- vocal_chunks/    matching vocal-only chunks
+- chunk_srts/      zero-based SRT subtitles for each chunk
+- chunk_text/      plain-text transcript for each chunk
+- stems/           full vocal and instrumental stems
+- transcripts/     full-source transcript files
+
+OUTPUTS
+-------
+output_folder
+- STRING path to the source-specific output folder.
+
+debug_text
+- STRING processing report containing analysis method, settings, cut-safety statistics and output paths.
+
+transcript_srt
+- Full transcription as standard SRT text.
+- The same full SRT is also saved in the transcripts folder.
+
+NOTES
+-----
+- The node is intentionally conservative about word boundaries. It searches for protected quiet corridors between detected words before falling back to less ideal cuts.
+- Vocal and instrumental stem generation uses Mel-RoFormer/audio-separator.

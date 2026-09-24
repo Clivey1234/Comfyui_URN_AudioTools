@@ -22,6 +22,7 @@ Available tags panel
 - The large available-tags area is BLACK.
 - Tag label text is WHITE, including inactive/already-selected tags.
 - Click an available tag to add it to the current selection.
+  - Tags already selected are highlighted with a muted teal background in the available-tags panel.
 - The active tab decides which category of tags is shown.
 
 Selected styles panel
@@ -71,3 +72,7 @@ NOTES
 - V9.68 changed the available-tags panel from yellow to black.
 - V9.69 keeps available-tag text white instead of greying the label itself.
 - V9.71 sorted preset tag lists alphabetically while preserving numeric BPM ordering.
+
+COLOUR BEHAVIOUR
+----------------
+The selector keeps the same muted colour scheme while idle and while the workflow is paused at the node. Only interactivity changes; colours no longer become brighter when the node becomes active.

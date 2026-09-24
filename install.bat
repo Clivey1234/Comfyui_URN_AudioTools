@@ -56,7 +56,7 @@ if errorlevel 1 (
 
 echo.
 echo Checking required modules...
-"%PYEXE%" -c "import importlib.util,sys; mods=['faster_whisper','audio_separator','librosa','scipy']; missing=[m for m in mods if importlib.util.find_spec(m) is None]; print('Missing: ' + ', '.join(missing) if missing else 'All URN Audio Nodes dependencies found.'); sys.exit(1 if missing else 0)"
+"%PYEXE%" -c "import importlib.util,sys; mods=['faster_whisper','audio_separator','librosa','scipy','soundfile','mutagen']; missing=[m for m in mods if importlib.util.find_spec(m) is None]; print('Missing: ' + ', '.join(missing) if missing else 'All URN Audio Nodes dependencies found.'); sys.exit(1 if missing else 0)"
 if errorlevel 1 (
     echo.
     echo ERROR: One or more dependencies are still unavailable.

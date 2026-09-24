@@ -13,5 +13,7 @@ These files are written to be copied/pasted into workflow Note nodes beside the 
 8. 08 - URN Audio Create Yue2 Lyrics.txt
 9. 09 - URN Audio Style Selector.txt
 10. 10 - URN Tabbed Markdown.txt
+11. 11 - URN Save Audio with Lyrics.txt
+12. 12 - URN Load Audio.txt
 
-The readmes describe purpose, user-visible inputs/settings, outputs and important workflow behaviour for the current V9.76 package.
+The readmes describe purpose, user-visible inputs/settings, outputs and important workflow behaviour for the current V9.86 package.

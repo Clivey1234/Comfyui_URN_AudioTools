@@ -1,0 +1,81 @@
+URN Save Audio with Lyrics
+==========================
+
+PURPOSE
+-------
+Saves a connected ComfyUI AUDIO stream as FLAC or MP3 while embedding Lyrics, Artist, Title and Album metadata. The output filename is controlled directly by the user and is no longer copied from the original source audio filename.
+
+INPUTS
+------
+audio
+- Required AUDIO input.
+
+Lyrics
+- Required STRING input containing the lyrics to embed.
+
+Artist
+- Optional STRING connector.
+- MP3: written to ID3 TPE1.
+- FLAC: written to Vorbis Comment ARTIST.
+
+Title
+- Optional STRING connector.
+- MP3: written to ID3 TIT2.
+- FLAC: written to Vorbis Comment TITLE.
+
+Album
+- Optional STRING connector.
+- MP3: written to ID3 TALB.
+- FLAC: written to Vorbis Comment ALBUM.
+
+format
+- flac
+- mp3
+
+Save Location
+- Default: audio
+- Relative folders are created under ComfyUI/output.
+- Example: music/finished -> ComfyUI/output/music/finished/
+- Absolute folders are also supported, for example:
+    D:\Music\Exports
+
+Filename
+- User-controlled base filename.
+- Default: audio
+- The selected .flac or .mp3 extension is added automatically.
+- Typing an audio extension yourself is safe; it is replaced by the selected output format.
+- If a batched AUDIO payload is supplied, additional items receive _001, _002, etc.
+
+METADATA
+--------
+MP3
+- Lyrics: ID3 USLT (Unsynchronised Lyrics/Text)
+- Artist: ID3 TPE1
+- Title: ID3 TIT2
+- Album: ID3 TALB
+- Saved as ID3v2.3 for broad player compatibility.
+
+FLAC
+- Lyrics: Vorbis Comment LYRICS
+- Artist: Vorbis Comment ARTIST
+- Title: Vorbis Comment TITLE
+- Album: Vorbis Comment ALBUM
+
+OUTPUTS
+-------
+audio
+- Unchanged AUDIO passthrough.
+
+saved_path
+- Full path to the saved file.
+- Batched saves are returned as newline-separated paths.
+
+NOTES
+-----
+- MP3 export requires FFmpeg in PATH.
+- FLAC export is lossless.
+- MP3 is encoded at 320 kbps.
+- The node is an output node and intentionally runs every queued workflow rather than being satisfied from cache.
+- V9.88 removes automatic use of the original source filename; Filename is now explicitly user-controlled.
+
+- V9.91 adds Album metadata input/output round-trip support through ID3 TALB / Vorbis ALBUM.

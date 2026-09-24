@@ -1,0 +1,17 @@
+URN Load Audio
+==============
+
+Loads an audio file from ComfyUI input and outputs:
+- AUDIO
+- Embedded_Lyrics
+- Artist
+- Title
+- Album
+- Source_Filename
+- Metadata_JSON
+
+Embedded lyrics created by URN Save Audio with Lyrics are recognised from:
+- MP3: ID3 USLT
+- FLAC: Vorbis Comment LYRICS
+
+Artist/title metadata can be connected to URN Audio Lyrics so online lookup does not need to guess the identity from the filename.

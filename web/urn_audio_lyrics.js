@@ -3,11 +3,15 @@ import { api } from "../../scripts/api.js";
 
 const NODE_ID = "URNAudioLyrics";
 const LOOKUP_WIDGET_NAME = "urnLyricsOvhLookupUI";
+const EMBEDDED_WIDGET_NAME = "urnEmbeddedLyricsUI";
 const LOOKUP_EVENT = "urn_audio_nodes.audio_lyrics.lookup_request";
+const EMBEDDED_EVENT = "urn_audio_nodes.audio_lyrics.embedded_request";
 const STATUS_EVENT = "urn_audio_nodes.audio_lyrics.status";
 const STATUS_WIDGET_NAME = "urnLyricsStatusUI";
 const LOOKUP_RESPONSE_ROUTE = "/urn_audio_nodes/audio_lyrics/lookup_response";
 const LOOKUP_PENDING_ROUTE = "/urn_audio_nodes/audio_lyrics/lookup_pending";
+const EMBEDDED_RESPONSE_ROUTE = "/urn_audio_nodes/audio_lyrics/embedded_response";
+const EMBEDDED_PENDING_ROUTE = "/urn_audio_nodes/audio_lyrics/embedded_pending";
 
 function isOurNode(node) {
     return node?.comfyClass === NODE_ID || node?.constructor?.comfyClass === NODE_ID;
@@ -116,6 +120,159 @@ function setStatus(node, message) {
     const clean = String(message || "Ready").trim() || "Ready";
     node.__urnLyricsStatusUI.textContent = `Status: ${clean}`;
     node.graph?.setDirtyCanvas?.(true, true);
+}
+
+function makeEmbeddedUI(node) {
+    const root = document.createElement("div");
+    Object.assign(root.style, {
+        boxSizing: "border-box",
+        width: "100%",
+        display: "none",
+        flexDirection: "column",
+        gap: "6px",
+        padding: "8px",
+        border: "1px solid rgba(255,184,70,.48)",
+        borderRadius: "7px",
+        background: "rgba(26,20,12,.72)",
+        userSelect: "none",
+    });
+
+    const status = document.createElement("div");
+    Object.assign(status.style, {
+        fontSize: "12px",
+        lineHeight: "16px",
+        color: "rgba(255,235,205,.92)",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+    });
+    status.textContent = "Embedded lyrics found in audio metadata";
+
+    const preview = document.createElement("textarea");
+    preview.readOnly = true;
+    preview.spellcheck = false;
+    Object.assign(preview.style, {
+        boxSizing: "border-box",
+        width: "100%",
+        height: "150px",
+        resize: "vertical",
+        border: "1px solid rgba(255,255,255,.18)",
+        borderRadius: "6px",
+        background: "#161616",
+        color: "#eee",
+        padding: "7px 8px",
+        fontSize: "12px",
+        lineHeight: "16px",
+        fontFamily: "inherit",
+        whiteSpace: "pre-wrap",
+    });
+
+    const row = document.createElement("div");
+    Object.assign(row.style, { display: "flex", gap: "7px", width: "100%" });
+
+    const use = document.createElement("button");
+    use.type = "button";
+    use.textContent = "Use Embedded Lyrics";
+    const ignore = document.createElement("button");
+    ignore.type = "button";
+    ignore.textContent = "Ignore / Search Online";
+    const stop = document.createElement("button");
+    stop.type = "button";
+    stop.textContent = "Stop Workflow";
+
+    for (const button of [use, ignore, stop]) {
+        Object.assign(button.style, {
+            flex: "1 1 0",
+            minHeight: "30px",
+            border: "1px solid rgba(255,255,255,.20)",
+            borderRadius: "7px",
+            color: "#fff",
+            background: "rgba(110,110,110,.56)",
+            fontSize: "12px",
+            cursor: "pointer",
+        });
+    }
+    use.style.borderColor = "rgba(255,160,36,.80)";
+    use.style.background = "rgba(120,75,20,.68)";
+    stop.style.borderColor = "rgba(255,92,92,.78)";
+    stop.style.background = "rgba(120,34,34,.68)";
+
+    row.append(use, ignore, stop);
+    root.append(status, preview, row);
+
+    for (const el of [root, preview, use, ignore, stop]) {
+        for (const evt of ["pointerdown", "mousedown", "mouseup", "dblclick", "wheel"]) {
+            el.addEventListener(evt, stopGraphEvent);
+        }
+    }
+    preview.addEventListener("keydown", stopGraphEvent);
+
+    node.__urnEmbeddedLyricsUI = { root, status, preview, use, ignore, stop };
+    return root;
+}
+
+function setEmbeddedVisible(node, visible) {
+    const ui = node?.__urnEmbeddedLyricsUI;
+    if (!ui) return;
+    node.__urnEmbeddedLyricsActive = !!visible;
+    ui.root.style.display = visible ? "flex" : "none";
+    if (visible) {
+        const w = Math.max(Number(node.size?.[0]) || 0, 470);
+        const h = Math.max(Number(node.size?.[1]) || 0, 475);
+        node.setSize?.([w, h]);
+    }
+    node.graph?.setDirtyCanvas?.(true, true);
+}
+
+function populateEmbedded(node, detail) {
+    const ui = node?.__urnEmbeddedLyricsUI;
+    if (!ui) return;
+    node.__urnEmbeddedLyricsToken = String(detail?.token || node.__urnEmbeddedLyricsToken || "");
+    const artist = String(detail?.artist || "").trim();
+    const title = String(detail?.title || "").trim();
+    ui.status.textContent = artist || title
+        ? `Embedded lyrics found — ${artist}${artist && title ? " — " : ""}${title}`
+        : "Embedded lyrics found in audio metadata";
+    ui.preview.value = String(detail?.lyrics || "");
+    ui.use.disabled = false;
+    ui.ignore.disabled = false;
+    ui.stop.disabled = false;
+    setEmbeddedVisible(node, true);
+}
+
+async function respondEmbedded(node, action) {
+    const ui = node?.__urnEmbeddedLyricsUI;
+    const token = String(node?.__urnEmbeddedLyricsToken || "");
+    if (!ui || !token) return;
+
+    ui.use.disabled = true;
+    ui.ignore.disabled = true;
+    ui.stop.disabled = true;
+    if (action === "use") ui.status.textContent = "Using embedded lyrics...";
+    else if (action === "stop") ui.status.textContent = "Stopping workflow...";
+    else ui.status.textContent = "Ignoring embedded lyrics — continuing...";
+
+    try {
+        const response = await api.fetchApi(EMBEDDED_RESPONSE_ROUTE, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                token,
+                node_id: String(node.id),
+                action,
+            }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.ok === false) throw new Error(data?.error || `HTTP ${response.status}`);
+        node.__urnEmbeddedLyricsToken = "";
+        setTimeout(() => setEmbeddedVisible(node, false), 450);
+    } catch (error) {
+        console.error("[URN Audio Lyrics] embedded lyrics response failed", error);
+        ui.status.textContent = `Could not continue: ${error?.message || error}`;
+        ui.use.disabled = false;
+        ui.ignore.disabled = false;
+        ui.stop.disabled = false;
+    }
 }
 
 function makeLookupUI(node) {
@@ -395,6 +552,30 @@ function handleLookupRequest(event) {
     populateLookup(node, detail);
 }
 
+function handleEmbeddedRequest(event) {
+    const detail = event?.detail || {};
+    const node = findNodeById(detail?.node_id);
+    if (!node || !isOurNode(node)) return;
+    installLyricsPreview(node);
+    populateEmbedded(node, detail);
+}
+
+async function recoverPendingEmbedded() {
+    try {
+        const response = await api.fetchApi(EMBEDDED_PENDING_ROUTE, { method: "GET" });
+        if (!response.ok) return;
+        const data = await response.json().catch(() => ({}));
+        for (const detail of data?.pending || []) {
+            const node = findNodeById(detail?.node_id);
+            if (!node || !isOurNode(node)) continue;
+            installLyricsPreview(node);
+            if (String(node.__urnEmbeddedLyricsToken || "") !== String(detail?.token || "")) {
+                populateEmbedded(node, detail);
+            }
+        }
+    } catch (_) {}
+}
+
 async function recoverPendingLookups() {
     try {
         const response = await api.fetchApi(LOOKUP_PENDING_ROUTE, { method: "GET" });
@@ -418,11 +599,65 @@ function installLyricsPreview(node) {
     node.__urnLyricsInstalled = true;
 
     const songWidget = node.widgets?.find?.((w) => w.name === "song");
-    if (songWidget) songWidget.label = "Song";
+    if (songWidget) songWidget.label = "Song Analysis";
     const timestampsWidget = node.widgets?.find?.((w) => w.name === "include_timestamps");
     if (timestampsWidget) timestampsWidget.label = "Include timestamps";
     const lookupToggle = node.widgets?.find?.((w) => w.name === "get_lyrics_ovh");
     if (lookupToggle) lookupToggle.label = "Get Online Lyrics";
+    const genderWidget = node.widgets?.find?.((w) => w.name === "gender_vocal_determination");
+    if (genderWidget) genderWidget.label = "Gender Vocal Determination";
+
+    // The backend deliberately keeps gender_vocal_determination LAST in the
+    // serialized widget order so workflows saved with the V9.88 baseline still
+    // map Song / Include timestamps / Get Online Lyrics correctly.  Visually it
+    // belongs directly under Song Analysis, though, so move the real widget for
+    // display and repair the legacy positional order again during serialization.
+    if (genderWidget && songWidget && Array.isArray(node.widgets)) {
+        const from = node.widgets.indexOf(genderWidget);
+        const songIndex = node.widgets.indexOf(songWidget);
+        if (from >= 0 && songIndex >= 0 && from !== songIndex + 1) {
+            node.widgets.splice(from, 1);
+            const refreshedSongIndex = node.widgets.indexOf(songWidget);
+            node.widgets.splice(refreshedSongIndex + 1, 0, genderWidget);
+        }
+    }
+
+    const previousSerializeForWidgetOrder = node.onSerialize;
+    node.onSerialize = function (data) {
+        const result = previousSerializeForWidgetOrder?.apply(this, arguments);
+        if (data) {
+            const getValue = (name, fallback) => {
+                const w = this.widgets?.find?.((x) => x?.name === name);
+                return w ? w.value : fallback;
+            };
+            const sourceWidget = this.widgets?.find?.((x) => x?.name === "source_filename_hint");
+            let sourceValue = sourceWidget?.value ?? "";
+            try {
+                if (typeof sourceWidget?.serializeValue === "function") {
+                    sourceValue = sourceWidget.serializeValue(this, 3);
+                }
+            } catch (_) {}
+
+            // Canonical backend/V9.88-compatible positional order.  The visual
+            // order may differ, but saved workflows remain safe to reopen.
+            data.widgets_values = [
+                getValue("song", true),
+                getValue("include_timestamps", false),
+                getValue("get_lyrics_ovh", true),
+                sourceValue,
+                getValue("gender_vocal_determination", true),
+            ];
+            if (data.widgets_values_named && typeof data.widgets_values_named === "object") {
+                data.widgets_values_named.song = getValue("song", true);
+                data.widgets_values_named.include_timestamps = getValue("include_timestamps", false);
+                data.widgets_values_named.get_lyrics_ovh = getValue("get_lyrics_ovh", true);
+                data.widgets_values_named.source_filename_hint = sourceValue;
+                data.widgets_values_named.gender_vocal_determination = getValue("gender_vocal_determination", true);
+            }
+        }
+        return result;
+    };
+
     hideFilenameHintWidget(node);
     syncSourceFilenameHint(node);
 
@@ -434,6 +669,24 @@ function installLyricsPreview(node) {
     statusWidget.serialize = false;
     if (statusWidget.options) statusWidget.options.serialize = false;
     node.__urnLyricsStatusWidget = statusWidget;
+
+    const embeddedRoot = makeEmbeddedUI(node);
+    const embeddedWidget = node.addDOMWidget(EMBEDDED_WIDGET_NAME, EMBEDDED_WIDGET_NAME, embeddedRoot, {
+        serialize: false,
+        getMinHeight: () => node.__urnEmbeddedLyricsActive ? 220 : 0,
+    });
+    embeddedWidget.serialize = false;
+    if (embeddedWidget.options) embeddedWidget.options.serialize = false;
+    node.__urnEmbeddedLyricsWidget = embeddedWidget;
+    node.__urnEmbeddedLyricsUI.use.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation(); respondEmbedded(node, "use");
+    });
+    node.__urnEmbeddedLyricsUI.ignore.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation(); respondEmbedded(node, "continue");
+    });
+    node.__urnEmbeddedLyricsUI.stop.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation(); respondEmbedded(node, "stop");
+    });
 
     const lookupRoot = makeLookupUI(node);
     const lookupWidget = node.addDOMWidget(LOOKUP_WIDGET_NAME, LOOKUP_WIDGET_NAME, lookupRoot, {
@@ -468,7 +721,8 @@ function installLyricsPreview(node) {
         widgets.splice(refreshedAfter + offset, 0, widget);
     };
     moveAfter(STATUS_WIDGET_NAME, "get_lyrics_ovh", 1);
-    moveAfter(LOOKUP_WIDGET_NAME, STATUS_WIDGET_NAME, 1);
+    moveAfter(EMBEDDED_WIDGET_NAME, STATUS_WIDGET_NAME, 1);
+    moveAfter(LOOKUP_WIDGET_NAME, EMBEDDED_WIDGET_NAME, 1);
 
     const previousWidgetChanged = node.onWidgetChanged;
     node.onWidgetChanged = function (name, value, oldValue, widget) {
@@ -522,13 +776,16 @@ app.registerExtension({
 
     setup() {
         api.addEventListener(LOOKUP_EVENT, handleLookupRequest);
+        api.addEventListener(EMBEDDED_EVENT, handleEmbeddedRequest);
         api.addEventListener(STATUS_EVENT, handleStatusEvent);
         scan();
+        recoverPendingEmbedded();
         recoverPendingLookups();
-        setTimeout(() => { scan(); recoverPendingLookups(); }, 250);
-        setTimeout(() => { scan(); recoverPendingLookups(); }, 1000);
+        setTimeout(() => { scan(); recoverPendingEmbedded(); recoverPendingLookups(); }, 250);
+        setTimeout(() => { scan(); recoverPendingEmbedded(); recoverPendingLookups(); }, 1000);
         if (!globalThis.__urnAudioLyricsLookupPendingPoll) {
             globalThis.__urnAudioLyricsLookupPendingPoll = setInterval(() => {
+                recoverPendingEmbedded();
                 recoverPendingLookups();
                 // Load Audio file selection changes do not fire a cable/connection event.
                 // Keep every URN Audio Lyrics filename hint in step with its upstream loader.

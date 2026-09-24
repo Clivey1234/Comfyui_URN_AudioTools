@@ -3,7 +3,7 @@ URN Audio Lyrics
 
 PURPOSE
 -------
-Create lyrics/transcript text from a connected AUDIO source. When online lookup is enabled, the node tries to identify the song, lets the user correct the identity manually if necessary, retrieves online lyrics, and uses Whisper only as the final fallback.
+Create lyrics/transcript text from a connected AUDIO source. When Embedded Lyrics are connected (normally from URN Load Audio), they are previewed first and the user chooses whether to use them. If they are ignored or absent, the node continues through the online identification/lyrics flow and uses Whisper only as the final fallback.
 
 INPUTS / SETTINGS
 -----------------
@@ -12,9 +12,13 @@ audio_input
 - Connect a standard ComfyUI Load Audio node or any other AUDIO output.
 - Audio_out passes this input through unchanged.
 
-Song
-- True: treat the source as a song. The node may isolate vocals temporarily, attempt conservative Verse/Chorus structure detection for Whisper transcription, and generate Music_Description.
-- False: perform straightforward transcription without song-structure analysis; Music_Description is normally empty.
+Song Analysis
+- True: enable song-specific analysis. This keeps BPM/music-feature analysis, temporary vocal isolation for Whisper fallback, and conservative Verse/Chorus structure detection.
+- False: skip song-structure analysis and use straightforward Whisper transcription.
+
+Gender Vocal Determination
+- True: independently enable temporary Mel-RoFormer vocal isolation plus conservative pitch analysis for `female lead vocal` / `male lead vocal`.
+- False: skip the vocal-gender determination stage. Song Analysis, BPM and Verse/Chorus detection can still remain enabled.
 
 Include timestamps
 - False: Transcript_Out is readable plain text.
@@ -22,8 +26,21 @@ Include timestamps
 - Lyrics.ovh is plain lyrics only, so a Lyrics.ovh result remains plain text even when this option is enabled.
 
 Get Online Lyrics
-- True (default): use the interactive online identification/lyrics flow described below.
-- False: skip online lookup and use local Whisper transcription directly.
+- True (default): after the embedded-lyrics check, use the interactive online identification/lyrics flow described below.
+- False: embedded lyrics are still offered first; if absent/rejected, skip online lookup and use local Whisper transcription directly.
+
+Embedded Lyrics
+- Optional STRING input, normally connected from URN Load Audio -> Embedded_Lyrics.
+- When non-empty, a scrollable preview is shown before any online lookup.
+- Use Embedded Lyrics returns that text immediately as Transcript_Out.
+- Ignore / Search Online continues to the normal online sequence (or Whisper when Get Online Lyrics is off).
+- Stop Workflow cancels the current workflow.
+
+Artist / Title / Album
+- Optional STRING metadata inputs, normally connected from URN Load Audio.
+- Artist/Title take priority over Artist - Title filename parsing for online song identification and MusicBrainz metadata.
+- Album is used directly when the connected metadata matches the accepted Artist/Title.
+- If Album is blank, MusicBrainz automatically selects the most appropriate official release group for the accepted recording. No additional validation dialog is shown.
 
 Status line
 - Display-only status directly below Get Online Lyrics.
@@ -53,17 +70,18 @@ When Get Online Lyrics is enabled, the intended sequence is:
    - If an artist search returns no titles, the user can edit the artist name and search again without resuming the workflow.
 
 4. Confirmed-song online lookup
-   - MusicBrainz metadata lookup runs for the confirmed artist/title.
+   - MusicBrainz metadata lookup runs for the confirmed artist/title and automatically fills Album when connected album metadata is unavailable.
    - LRCLIB is tried first for lyrics.
    - Lyrics.ovh is tried second.
    - If neither service supplies usable lyrics, the node offers/uses the manual-search path before Whisper when appropriate; Whisper is the final fallback.
 
 LYRIC PROVIDER ORDER
 --------------------
-For a confirmed song identity:
-1. LRCLIB
-2. Lyrics.ovh
-3. Whisper only after online/manual identification paths have failed or been rejected
+Overall sequence:
+1. Embedded metadata lyrics (when connected) - user chooses Use or Ignore
+2. LRCLIB for a confirmed song identity
+3. Lyrics.ovh
+4. Whisper only after embedded/online/manual paths have failed or been rejected
 
 LRCLIB
 - Free/no-key source.
@@ -76,15 +94,16 @@ Lyrics.ovh
 
 Whisper
 - Local final fallback transcription.
-- In Song mode, the node can use lyric repetition/timing and supporting beat/bar analysis to attempt conservative [Verse N] / [Chorus] labels.
+- With Song Analysis enabled, the node can use lyric repetition/timing and supporting beat/bar analysis to attempt conservative [Verse N] / [Chorus] labels.
 - Structure labels are heuristic and are not official metadata.
 
 MUSIC DESCRIPTION
 -----------------
-When Song is enabled and a song identity is confirmed, Music_Description is a comma-separated STRING for downstream style/music prompting.
+When a song identity is confirmed, Music_Description is a comma-separated STRING for downstream style/music prompting. Song Analysis controls the BPM/music-feature contribution, while Gender Vocal Determination independently controls the conservative lead-vocal label.
 
 MusicBrainz contributes:
 - Recording/release/artist genre and community-style tags when available.
+- Automatic Album lookup for a confirmed Artist/Title when no matching embedded Album metadata is available. It prefers official Album release groups, then EP, then Single; Compilation, Various Artists, Live and Remix releases are rejected entirely. Releases credited to a different known artist are also rejected; among valid matches, original artist Albums are preferred over EPs and Singles, with edition variants deprioritized and the earliest suitable release preferred.
 - The confirmed title is tried exactly first.
 - If confidence is poor, a fallback search removes common release/remaster decorations such as `(2015 Remaster)`, `[Remastered]`, `- Remastered 2011`, `(Deluxe Edition)` and `(Album Version)`.
 - Meaningful recording qualifiers such as Live, Remix and Acoustic are preserved.
@@ -97,8 +116,8 @@ MusicBrainz tag filtering (V9.73)
 - Built-in default blocked terms remain active if the JSON file is missing or malformed.
 
 Librosa contributes only:
-- measured BPM
-- `female lead vocal` or `male lead vocal` when the isolated-vocal pitch result is sufficiently clear
+- measured BPM when Song Analysis is enabled
+- `female lead vocal` or `male lead vocal` when Gender Vocal Determination is enabled and the isolated-vocal pitch result is sufficiently clear
 
 Librosa does NOT add generic local guesses for genre, production style, timbre, groove, bass character, dynamic range or vocal register to Music_Description.
 
@@ -118,6 +137,24 @@ Audio_out
 - AUDIO passthrough of the exact connected audio_input.
 - No gain, resampling or transcription-related modification is applied.
 
+Artist
+- STRING containing the artist identity the user accepted.
+- Embedded Lyrics acceptance uses the connected Artist metadata.
+- Online acceptance uses the exact artist from the selected online result.
+- Empty when no artist/title identity was accepted before Whisper fallback.
+
+Title
+- STRING containing the title identity the user accepted.
+- Embedded Lyrics acceptance uses the connected Title metadata.
+- Online acceptance uses the exact selected song title.
+- Empty when no artist/title identity was accepted before Whisper fallback.
+
+Album
+- STRING containing the accepted/automatically resolved album identity.
+- Matching embedded Album metadata from URN Load Audio has first priority.
+- Otherwise MusicBrainz resolves the recording and automatically chooses the most suitable Album/EP/Single without prompting the user.
+- Empty when no confident album/release match is available.
+
 IMPORTANT BEHAVIOUR
 -------------------
 - V9.61: Stop Workflow was added to the interactive song-selection panel.
@@ -127,3 +164,30 @@ IMPORTANT BEHAVIOUR
 - V9.73: MusicBrainz community tags are filtered through urn_musicbrainz_tag_blocklist.json before Music_Description is emitted.
 - The on-node player was removed in V9.58; online filename detection comes from the upstream audio loader/file widget.
 - The obsolete V9.67 LRCLIB Lyricsfile experiment is not part of this accepted branch.
+
+V9.86
+- Added Embedded Lyrics, Artist and Title optional inputs for URN Load Audio integration.
+- Embedded lyrics are previewed and offered before any external lyric lookup.
+- Artist/Title metadata now takes priority over filename parsing.
+
+V9.88
+- Added Artist and Title output connectors.
+- The outputs preserve the identity actually accepted by the user, including when an accepted online identity later falls back to Whisper for transcript text.
+
+V9.89
+- Renamed the visible Song control to Song Analysis while retaining the internal `song` widget name for saved-workflow compatibility.
+- Added Gender Vocal Determination as a separate toggle.
+- Song Analysis now controls BPM/music-feature analysis and Verse/Chorus processing independently of vocal-gender classification.
+- Gender Vocal Determination controls the Mel-RoFormer/pitch stage used for the conservative male/female lead-vocal label.
+
+V9.91
+- Added Album input/output integration.
+- Matching embedded Album metadata is preserved automatically.
+- When Album is missing, confirmed Artist + Title trigger an automatic MusicBrainz release lookup with no extra user validation step.
+- Album selection prefers official Album release groups, then EP, then Single; compilation/live/remix/edition variants are deprioritized and earlier suitable releases are preferred.
+
+
+V9.92
+- Tightens automatic Album resolution: Compilation, Various Artists, Live and Remix release-groups are hard-rejected and are never used as a fallback.
+- When artist-credit data is available, releases credited to a different artist are rejected.
+- Valid original-artist Albums are preferred over EPs and Singles; if no acceptable match remains, Album is left blank rather than using a compilation.

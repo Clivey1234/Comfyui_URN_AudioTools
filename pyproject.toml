@@ -1,7 +1,7 @@
 [project]
 name = "URN-Audio-Nodes"
 description = "URN Audio Nodes for ComfyUI"
-version = "9.7.7"
+version = "9.8.9"
 requires-python = ">=3.10"
 dependencies = []
 
