@@ -1,8 +1,8 @@
 # URN Audio Nodes for ComfyUI
 
-A collection of custom ComfyUI nodes for audio editing, splitting, mixing, lyric handling, style selection, YuE2 workflows, and workflow documentation.  
-The package is designed to keep common audio tasks inside ComfyUI while providing interactive visual controls where useful.  
-Several nodes support connected ComfyUI `AUDIO` inputs directly, and the package includes optional transcription, stem-separation, and music-analysis features.
+A collection of custom ComfyUI nodes for audio editing, splitting, mixing, lyric handling, style selection, YuE2 workflows etc  
+The package is designed to keep common audio tasks inside ComfyUI while providing interactive visual controls.  
+Several nodes support optional transcription, stem-separation, and music-analysis features.
 
 ## Included Nodes
 ### URN Audio Lyrics (gets online Lyrics for Yue2 etc)
