@@ -6,11 +6,19 @@ Several nodes support connected ComfyUI `AUDIO` inputs directly, and the package
 
 ## Included Nodes
 ### URN Audio Lyrics (Automatically gets online Lyrics for Yue2 etc)
-<img width="675" height="742" alt="image" src="https://github.com/user-attachments/assets/53426f75-a27a-44cb-bbec-95ce82bc171f" />
+
+Custom Load Audio with meta detection for artist, song, lyrics etc
+<img width="975" height="561" alt="image" src="https://github.com/user-attachments/assets/575e7b4a-74fd-4acb-8e2f-c1032834cabc" />
+
 
 Retrieves lyrics for songs or transcribes them when online lyrics cannot be found.  
 Supports automatic title detection, interactive song selection, manual artist/title search, and Whisper as the final fallback.  
 It can also output duration, filtered MusicBrainz style information, BPM analysis, and the original audio.
+
+### URN Save Audio with Lyrics (Automatically saves metadata in audieo file with Lyrics)
+<img width="543" height="277" alt="image" src="https://github.com/user-attachments/assets/73231ff3-2ca0-4239-87bb-38c48d7c038f" />
+
+
 ### URN Audio Style Selector (gets online Genres for Yue2 etc)
 <img width="742" height="549" alt="image" src="https://github.com/user-attachments/assets/2fdc461c-4b65-4b42-ae1d-9bdc5785f9c7" />
 
