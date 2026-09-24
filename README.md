@@ -19,7 +19,7 @@ It can also output duration, filtered MusicBrainz style information, BPM analysi
 <img width="543" height="277" alt="image" src="https://github.com/user-attachments/assets/73231ff3-2ca0-4239-87bb-38c48d7c038f" />
 
 
-### URN Audio Style Selector (gets online Genres for Yue2 etc)
+### URN Audio Style Selector (Tags automatically taken from online or customised for Yue2 etc)
 <img width="742" height="549" alt="image" src="https://github.com/user-attachments/assets/2fdc461c-4b65-4b42-ae1d-9bdc5785f9c7" />
 
 Visual style/tag selector designed for music-generation workflows such as YuE2.  
