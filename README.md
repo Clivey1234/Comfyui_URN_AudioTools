@@ -14,7 +14,7 @@ Supports automatic title detection, interactive song selection, manual artist/ti
 It can also output duration, filtered MusicBrainz style information, BPM analysis, and the original audio.
 ### URN Audio Style Selector (gets online Genres for Yue2 etc)
 Populates with online tags and allows you to add/remove/customise tags
-<img width="832" height="619" alt="image" src="https://github.com/user-attachments/assets/b9ba7a2c-0752-4115-a591-7c0fe1a762e3" />
+<img width="640" height="619" alt="image" src="https://github.com/user-attachments/assets/b9ba7a2c-0752-4115-a591-7c0fe1a762e3" />
 
 Visual style/tag selector designed for music-generation workflows such as YuE2.  
 Incoming generated styles can be reviewed, removed, or supplemented with user-selected tags from configurable categories.  
@@ -25,6 +25,7 @@ Splits longer audio into manageable chunks while attempting to avoid cutting thr
 Can use Whisper analysis and optional Mel-RoFormer vocal/music separation to improve cut placement.  
 Supports vocal/music stem export, vocal chunks, transcript sidecars, and FLAC/MP3 chunk output.
 ### URN Audio Mixer
+<img width="1245" height="877" alt="image" src="https://github.com/user-attachments/assets/4178afea-55d7-429e-b95b-1bdc04605cf8" />
 
 A visual multi-track audio mixer for arranging and combining multiple clips inside ComfyUI.  
 Clips can be positioned and adjusted independently with trim, fades, and track-level controls.  
