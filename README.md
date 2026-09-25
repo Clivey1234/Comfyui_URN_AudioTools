@@ -32,21 +32,26 @@ Tabs and available styles are loaded from JSON, and custom user tags can be adde
 Splits longer audio into manageable chunks while attempting to avoid cutting through vocals or words.  
 Can use Whisper analysis and optional Mel-RoFormer vocal/music separation to improve cut placement.  
 Supports vocal/music stem export, vocal chunks, transcript sidecars, and FLAC/MP3 chunk output.
+
 ### URN Audio Mixer
+<img width="1199" height="636" alt="image" src="https://github.com/user-attachments/assets/3c321473-884d-4599-b45f-6cb936ecd863" />
 
 A visual multi-track audio mixer for arranging and combining multiple clips inside ComfyUI.  
 Clips can be positioned and adjusted independently with trim, fades, and track-level controls.  
 Useful for assembling generated music, vocals, effects, or other audio elements into a final mix.
+
 ### URN Audio Channel
 
 Provides straightforward stereo-channel processing for connected audio.  
 Includes left/right level control, channel swapping, static panning, and whole-clip auto-pan.  
 Designed as a lightweight utility node for quick stereo adjustments.
+
 ### URN Audio Trim Fade
 
 Visual trim, fade, gain, normalization, and silence-padding utility for connected audio.  
 Includes an interactive waveform editor with start/end and fade controls, plus local preview support.  
 Can work by output length or end position and passes the processed audio back into the workflow.
+
 ### URN Text Edit
 
 Interactive text-review node that pauses the workflow until the user accepts the current text.  
