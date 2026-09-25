@@ -607,20 +607,49 @@ function installLyricsPreview(node) {
     const genderWidget = node.widgets?.find?.((w) => w.name === "gender_vocal_determination");
     if (genderWidget) genderWidget.label = "Gender Vocal Determination";
 
-    // The backend deliberately keeps gender_vocal_determination LAST in the
-    // serialized widget order so workflows saved with the V9.88 baseline still
-    // map Song / Include timestamps / Get Online Lyrics correctly.  Visually it
-    // belongs directly under Song Analysis, though, so move the real widget for
-    // display and repair the legacy positional order again during serialization.
-    if (genderWidget && songWidget && Array.isArray(node.widgets)) {
+    // IMPORTANT: do NOT move gender_vocal_determination yet. ComfyUI restores
+    // workflow widget values positionally while a loaded node is being configured.
+    // Moving this widget inside nodeCreated() changes that positional order and can
+    // make the saved hidden source filename land on Get Online Lyrics, which then
+    // appears disabled and sends the run directly to Whisper after a restart.
+    // Keep the canonical backend order until configuration has completed, then move
+    // the real widget only for display.
+    const positionGenderWidget = () => {
+        if (!genderWidget || !songWidget || !Array.isArray(node.widgets)) return;
         const from = node.widgets.indexOf(genderWidget);
         const songIndex = node.widgets.indexOf(songWidget);
         if (from >= 0 && songIndex >= 0 && from !== songIndex + 1) {
             node.widgets.splice(from, 1);
             const refreshedSongIndex = node.widgets.indexOf(songWidget);
             node.widgets.splice(refreshedSongIndex + 1, 0, genderWidget);
+            node.graph?.setDirtyCanvas?.(true, true);
         }
-    }
+    };
+
+    // V9.90+ writes a named copy alongside the legacy positional list. Restore it
+    // after ComfyUI's normal configure pass when available. This repairs workflows
+    // saved by those versions without changing the intentional value of users who
+    // have Get Online Lyrics disabled.
+    const previousConfigureForWidgetOrder = node.onConfigure;
+    node.onConfigure = function (info) {
+        const result = previousConfigureForWidgetOrder?.apply(this, arguments);
+        const named = info?.widgets_values_named;
+        if (named && typeof named === "object") {
+            for (const name of [
+                "song",
+                "include_timestamps",
+                "get_lyrics_ovh",
+                "source_filename_hint",
+                "gender_vocal_determination",
+            ]) {
+                if (!Object.prototype.hasOwnProperty.call(named, name)) continue;
+                const widget = this.widgets?.find?.((w) => w?.name === name);
+                if (widget) widget.value = named[name];
+            }
+        }
+        setTimeout(positionGenderWidget, 0);
+        return result;
+    };
 
     const previousSerializeForWidgetOrder = node.onSerialize;
     node.onSerialize = function (data) {
@@ -754,6 +783,10 @@ function installLyricsPreview(node) {
     setCompactSize();
     requestAnimationFrame(setCompactSize);
 
+    // Defer the visual-only gender move until the current creation/configuration
+    // stack is finished. Fresh nodes still look the same, while loaded workflows
+    // keep the canonical positional order long enough for ComfyUI to restore them.
+    setTimeout(positionGenderWidget, 0);
     queueMicrotask(() => syncConnectedAudioPreview(node));
     node.graph?.setDirtyCanvas?.(true, true);
 }

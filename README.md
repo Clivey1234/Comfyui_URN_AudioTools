@@ -5,22 +5,12 @@ The package is designed to keep common audio tasks inside ComfyUI while providin
 Several nodes support connected ComfyUI `AUDIO` inputs directly, and the package includes optional transcription, stem-separation, and music-analysis features.
 
 ## Included Nodes
-### URN Audio Lyrics (Automatically gets online Lyrics for Yue2 etc)
-
-Custom Load Audio with meta detection for artist, song, lyrics etc
-<img width="975" height="561" alt="image" src="https://github.com/user-attachments/assets/575e7b4a-74fd-4acb-8e2f-c1032834cabc" />
-
+### URN Audio Lyrics (gets online Lyrics for Yue2 etc)
 
 Retrieves lyrics for songs or transcribes them when online lyrics cannot be found.  
 Supports automatic title detection, interactive song selection, manual artist/title search, and Whisper as the final fallback.  
 It can also output duration, filtered MusicBrainz style information, BPM analysis, and the original audio.
-
-### URN Save Audio with Lyrics (Automatically saves metadata in audio file with Lyrics)
-<img width="543" height="277" alt="image" src="https://github.com/user-attachments/assets/73231ff3-2ca0-4239-87bb-38c48d7c038f" />
-
-
-### URN Audio Style Selector (Tags automatically taken from online or customised for Yue2 etc)
-<img width="742" height="549" alt="image" src="https://github.com/user-attachments/assets/2fdc461c-4b65-4b42-ae1d-9bdc5785f9c7" />
+### URN Audio Style Selector (gets online Genres for Yue2 etc)
 
 Visual style/tag selector designed for music-generation workflows such as YuE2.  
 Incoming generated styles can be reviewed, removed, or supplemented with user-selected tags from configurable categories.  
@@ -31,7 +21,6 @@ Splits longer audio into manageable chunks while attempting to avoid cutting thr
 Can use Whisper analysis and optional Mel-RoFormer vocal/music separation to improve cut placement.  
 Supports vocal/music stem export, vocal chunks, transcript sidecars, and FLAC/MP3 chunk output.
 ### URN Audio Mixer
-<img width="1027" height="529" alt="image" src="https://github.com/user-attachments/assets/74dedf52-183d-4056-bd00-ad7f9f4a7257" />
 
 A visual multi-track audio mixer for arranging and combining multiple clips inside ComfyUI.  
 Clips can be positioned and adjusted independently with trim, fades, and track-level controls.  

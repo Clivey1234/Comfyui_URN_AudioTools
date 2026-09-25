@@ -191,3 +191,7 @@ V9.92
 - Tightens automatic Album resolution: Compilation, Various Artists, Live and Remix release-groups are hard-rejected and are never used as a fallback.
 - When artist-credit data is available, releases credited to a different artist are rejected.
 - Valid original-artist Albums are preferred over EPs and Singles; if no acceptable match remains, Album is left blank rather than using a compilation.
+V9.93
+- Fixed saved-workflow reload ordering so Get Online Lyrics keeps its saved/default value after restarting ComfyUI.
+- Gender Vocal Determination is still displayed directly under Song Analysis, but the visual move now happens only after workflow values are restored.
+- V9.90+ named widget values are used as an additional compatibility repair when available.
