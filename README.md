@@ -21,6 +21,11 @@ It can also output duration, filtered MusicBrainz style information, BPM analysi
 Visual style/tag selector designed for music-generation workflows such as YuE2.  
 Incoming generated styles can be reviewed, removed, or supplemented with user-selected tags from configurable categories.  
 Tabs and available styles are loaded from JSON, and custom user tags can be added and saved directly from the node.
+
+
+### URN Audio Load and Save with Lyrics metadata
+<img width="448" height="224" alt="image" src="https://github.com/user-attachments/assets/c99bd020-27e0-4edd-8666-05f4220ba020" />
+
 ### URN Audio Smart Splitter
 
 Splits longer audio into manageable chunks while attempting to avoid cutting through vocals or words.  
