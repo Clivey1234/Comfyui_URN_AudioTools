@@ -2187,11 +2187,9 @@ class URNAudioLyrics(io.ComfyNode):
             display_name="URN Audio Lyrics",
             category="URN Audio Tools",
             description=(
-                "Simple audio-to-text transcription from a connected AUDIO input. "
-                "When embedded lyrics are connected (normally from URN Load Audio), they are shown first for Use/Ignore confirmation before any external lyric lookup. Optional Artist/Title/Album metadata is preferred over filename parsing. "
-                "Optional online lyric lookup then offers an alphabetical song dropdown, and if the automatic match is missing/rejected lets the user manually search by artist before Whisper is used as the final fallback. Stop Workflow remains available at each interactive stage. Accepted titles try LRCLIB first and Lyrics.ovh second. "
-                "Song Analysis controls song-specific processing, BPM/music-feature analysis, temporary vocal isolation for Whisper fallback, and conservative Verse/Chorus detection. Gender Vocal Determination independently controls whether the node performs isolated-vocal pitch analysis for a conservative male/female lead-vocal label. "
-                "Include timestamps outputs standard SRT text through Transcript_Out when Whisper is used, and also uses LRCLIB synced lyrics when available. Artist, Title and Album outputs expose the identity the user accepted, whether from embedded metadata or the online selection panel. Missing Album metadata is filled automatically from MusicBrainz without an extra user prompt. Music_Description uses MusicBrainz genres/tags when a song is confirmed, BPM when Song Analysis is enabled, and a conservative male/female lead-vocal label when Gender Vocal Determination is enabled and detectable. MusicBrainz tries the confirmed title first, then retries with common remaster/release suffixes removed if needed."
+                "Gets lyrics from embedded metadata or online sources, with Whisper as the fallback. "
+                "Outputs the accepted Artist, Title and Album plus Music_Description. "
+                "Song Analysis and Gender Vocal Determination can be enabled independently."
             ),
             is_output_node=True,
             inputs=[
