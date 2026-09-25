@@ -1,16 +1,20 @@
-# URN Audio Nodes for ComfyUI
+# ComfyUI - URN Audio Nodes (Yue2)
 
 A collection of custom ComfyUI nodes for audio editing, splitting, mixing, lyric handling, style selection, YuE2 workflows, and workflow documentation.  
 The package is designed to keep common audio tasks inside ComfyUI while providing interactive visual controls where useful.  
-Several nodes support connected ComfyUI `AUDIO` inputs directly, and the package includes optional transcription, stem-separation, and music-analysis features.
+
 
 ## Included Nodes
 ### URN Audio Lyrics (gets online Lyrics for Yue2 etc)
+Retrieves lyrics for songs or transcribes them when online lyrics cannot be found. 
+<img width="610" height="678" alt="image" src="https://github.com/user-attachments/assets/661945fe-6f2d-4d2b-8955-a78ac1bc2690" />
 
-Retrieves lyrics for songs or transcribes them when online lyrics cannot be found.  
+ 
 Supports automatic title detection, interactive song selection, manual artist/title search, and Whisper as the final fallback.  
 It can also output duration, filtered MusicBrainz style information, BPM analysis, and the original audio.
-### URN Audio Style Selector (gets online Genres for Yue2 etc)
+
+### URN Audio Style Selector (gets online Styles and customer sytles maker for Yue2 etc)
+<img width="890" height="657" alt="image" src="https://github.com/user-attachments/assets/1a7d809e-1abf-41e6-924c-d7eead7c18e9" />
 
 Visual style/tag selector designed for music-generation workflows such as YuE2.  
 Incoming generated styles can be reviewed, removed, or supplemented with user-selected tags from configurable categories.  
