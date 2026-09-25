@@ -4,6 +4,12 @@ A collection of custom ComfyUI nodes for audio editing, splitting, mixing, lyric
 The package is designed to keep common audio tasks inside ComfyUI while providing interactive visual controls where useful.  
 
 
+Install Intructions at the bottom of the page.
+
+Tutorial video after you have download the nodes.
+https://youtu.be/VmiJJPEz8Mg
+
+
 ## Included Nodes
 ### URN Audio Lyrics (gets online Lyrics for Yue2 etc)
 Retrieves lyrics for songs or transcribes them when online lyrics cannot be found. 
