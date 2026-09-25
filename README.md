@@ -24,7 +24,8 @@ Tabs and available styles are loaded from JSON, and custom user tags can be adde
 
 
 ### URN Audio Load and Save with Lyrics metadata
-<img width="448" height="224" alt="image" src="https://github.com/user-attachments/assets/c99bd020-27e0-4edd-8666-05f4220ba020" />
+<img width="850" height="267" alt="image" src="https://github.com/user-attachments/assets/f39074d3-51ea-41ec-b481-e99d33e69324" />
+
 
 ### URN Audio Smart Splitter
 
